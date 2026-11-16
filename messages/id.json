@@ -1,0 +1,205 @@
+{
+  "common": {
+    "appName": "SoufTools",
+    "tagline": "Platform AI Kelas Dunia Performa Ultra",
+    "subtitle": "Rasakan model AI tingkat atas dengan kecepatan ultra, pencarian web langsung, dan kecerdasan multi-bahasa",
+    "startChat": "Mulai Obrolan Sekarang",
+    "exploreAdmin": "Dashboard Admin",
+    "newChat": "Obrolan Baru",
+    "history": "Riwayat Obrolan",
+    "settings": "Pengaturan",
+    "adminPanel": "Panel Admin",
+    "login": "Masuk",
+    "logout": "Keluar",
+    "selectModel": "Pilih Model",
+    "webSearch": "Pencarian Web",
+    "searchPlaceholder": "Tanyakan apa saja kepada SoufAI...",
+    "send": "Kirim",
+    "copy": "Salin",
+    "copied": "Tersalin!",
+    "retry": "Coba Lagi",
+    "clearHistory": "Hapus Riwayat",
+    "noHistory": "Tidak ada riwayat obrolan",
+    "activeStatus": "Aktif & Siap",
+    "busyStatus": "Layanan Sementara Sibuk",
+    "cancel": "Batal",
+    "save": "Simpan Perubahan",
+    "loading": "Memuat...",
+    "success": "Operasi berhasil diselesaikan",
+    "error": "Terjadi kesalahan. Silakan coba lagi."
+  },
+  "navigation": {
+    "home": "Beranda",
+    "chat": "Obrolan AI",
+    "tools": "Katalog Alat",
+    "calculator": "Kalkulator Token",
+    "pricing": "Harga",
+    "about": "Tentang Kami",
+    "privacy": "Kebijakan Privasi",
+    "terms": "Syarat Layanan",
+    "admin": "Pusat Admin"
+  },
+  "auth": {
+    "title": "Selamat Datang Kembali",
+    "subtitle": "Masuk untuk mengakses sesi tersimpan dan memori AI Anda",
+    "googleLogin": "Lanjutkan dengan Google",
+    "githubLogin": "Lanjutkan dengan GitHub",
+    "emailLabel": "Alamat Email",
+    "passwordLabel": "Kata Sandi",
+    "phoneLabel": "Nomor Telepon",
+    "phoneLogin": "Masuk via SMS OTP",
+    "or": "ATAU",
+    "submitLogin": "Masuk",
+    "submitRegister": "Buat Akun Gratis",
+    "toggleRegister": "Belum punya akun? Daftar",
+    "toggleLogin": "Sudah terdaftar? Masuk"
+  },
+  "home": {
+    "heroBadge": "SoufTools v10.0 — AI Multi-Bahasa Global",
+    "heroTitle": "Platform AI Cerdas Global Serba Ada",
+    "heroDesc": "Inferensi ultra-cepat, pencarian web langsung dengan sumber terverifikasi, dan pembuatan gambar 4K.",
+    "ctaStart": "Buka Ruang Kerja",
+    "ctaExplore": "Jelajahi Semua Alat",
+    "featureChatTitle": "Obrolan AI Multi-Model",
+    "featureChatDesc": "Beralih dengan mulus antara model SoufAI Spark, Core, Pro, Coder, dan Ultra.",
+    "featureImageTitle": "Pembuat & Pengedit Gambar AI",
+    "featureImageDesc": "Buat karya seni 4K dan edit area gambar secara interaktif.",
+    "featureSearchTitle": "Pencarian Web Real-Time",
+    "featureSearchDesc": "Hasil pencarian web langsung dengan sitasi sumber terverifikasi.",
+    "featureCodingTitle": "Agen AI & Pratinjau Terisolasi",
+    "featureCodingDesc": "Eksekusi kode dalam kontainer cloud yang aman."
+  },
+  "chat": {
+    "newConversation": "Percakapan Baru",
+    "start": "Mulai Obrolan",
+    "stop": "Hentikan Generasi",
+    "placeholder": "Tanyakan apa saja kepada SoufAI...",
+    "attachFile": "Lampirkan Berkas atau Gambar",
+    "enableWebSearch": "Aktifkan Pencarian Web",
+    "modelSelectorTitle": "Pilih Mesin Model",
+    "memoryActive": "Memori AI Aktif",
+    "tokensUsed": "Token",
+    "thinking": "Menganalisis & Menerka...",
+    "emptyStateTitle": "Apa yang ingin Anda buat hari ini?",
+    "emptyStateDesc": "Pilih templat atau ajukan pertanyaan dalam bahasa apa pun."
+  },
+  "agent": {
+    "thinking": "Agen SoufAI sedang menganalisis permintaan...",
+    "searching": "Mencari sumber web langsung...",
+    "openingSource": "Membaca dokumen sumber...",
+    "readingPage": "Menganalisis konten...",
+    "verifying": "Memverifikasi kode...",
+    "completed": "Tugas berhasil diselesaikan",
+    "nodabaTitle": "Agen Admin Nodaba",
+    "nodabaDesc": "Agen rotasi kunci, penyeimbang beban, dan pemantauan kesehatan."
+  },
+  "tools": {
+    "catalogTitle": "Katalog Alat AI",
+    "catalogDesc": "Mesin AI khusus untuk pengembang dan peneliti.",
+    "launchTool": "Jalankan Alat",
+    "exploreGuide": "Lihat Panduan",
+    "intentLabel": "Tujuan Utama",
+    "categoryLabel": "Kategori"
+  },
+  "search": {
+    "groundingActive": "Pencarian Langsung Aktif",
+    "sourcesCount": "{count} Sumber Terverifikasi",
+    "searchingQuery": "Mencari: {query}",
+    "noResults": "Tidak ada hasil pencarian"
+  },
+  "sources": {
+    "title": "Sumber & Referensi Terverifikasi",
+    "visitDomain": "Kunjungi Sumber",
+    "citation": "Sitasi #{index}",
+    "domainVerified": "Domain Terverifikasi"
+  },
+  "files": {
+    "uploadTitle": "Tarik berkas ke sini atau klik untuk memilih",
+    "maxSize": "Ukuran maksimum: 20MB",
+    "supportedFormats": "Gambar, Kode, PDF, TXT, JSON"
+  },
+  "images": {
+    "generatorTitle": "Pembuat Gambar AI",
+    "editorTitle": "Editor Inpainting AI",
+    "promptPlaceholder": "Gambarkan gambar yang ingin Anda buat...",
+    "aspectRatio": "Rasio Aspek",
+    "generate": "Buat Gambar",
+    "download": "Unduh Gambar"
+  },
+  "coding": {
+    "workspaceTitle": "Ruang Kerja Rekayasa Perangkat Lunak AI",
+    "runCode": "Jalankan Kode",
+    "preview": "Pratinjau Interaktif",
+    "editor": "Editor Kode",
+    "console": "Log Konsol",
+    "terminal": "Terminal"
+  },
+  "preview": {
+    "loading": "Memulai Kontainer Cloud...",
+    "ready": "Pratinjau Siap",
+    "error": "Gagal mengompilasi pratinjau"
+  },
+  "settings": {
+    "title": "Pengaturan Platform",
+    "subtitle": "Sesuaikan perilaku AI dan preferensi Anda",
+    "language": "Bahasa Antarmuka",
+    "theme": "Tema & Gaya",
+    "memoryToggle": "Aktifkan Memori AI",
+    "autoPlayTts": "Putar Suara Otomatis",
+    "clearChats": "Hapus Semua Riwayat Obrolan",
+    "exportData": "Ekspor Data Saya"
+  },
+  "profile": {
+    "account": "Informasi Akun",
+    "email": "Email Terdaftar",
+    "role": "Peran Akun",
+    "adminBadge": "Admin Resmi"
+  },
+  "admin": {
+    "title": "Pusat Kontrol Admin",
+    "accessDenied": "Akses Ditolak! Khusus untuk administrator.",
+    "tabs": {
+      "keys": "Kunci AI",
+      "efficiency": "Efisiensi",
+      "vision": "AI Visi",
+      "runtime": "Lingkungan",
+      "seo": "Manajer SEO",
+      "tools": "Alat",
+      "agent": "Agen Nodaba",
+      "stats": "Statistik",
+      "languages": "Pusat Bahasa"
+    },
+    "languages": {
+      "title": "Pusat Bahasa Global & Arsitektur i18n",
+      "desc": "Kelola 12 bahasa utama, audit cakupan terjemahan, dan mode pengujian.",
+      "overallCoverage": "Cakupan Terjemahan Keseluruhan",
+      "totalCatalogKeys": "Total Kunci Kamus",
+      "pseudoToggle": "Mode Pseudo-Lokalisasi",
+      "runAudit": "Jalankan Audit",
+      "missingKeysCount": "Kunci Hilang"
+    }
+  },
+  "errors": {
+    "network": "Kesalahan koneksi jaringan.",
+    "modelUnavailable": "Model sementara tidak tersedia.",
+    "toolFailed": "Eksekusi alat gagal. Mencoba lagi...",
+    "fileTooLarge": "Ukuran berkas melebihi 20MB.",
+    "unsupportedFile": "Format berkas tidak didukung.",
+    "sessionExpired": "Sesi telah berakhir. Silakan masuk kembali."
+  },
+  "billing": {
+    "freeTier": "Paket Gratis Selamanya",
+    "proTier": "Paket Pengembang Pro",
+    "ultraTier": "Paket Enterprise Ultra",
+    "upgradeBtn": "Tingkatkan Paket"
+  },
+  "notifications": {
+    "settingsSaved": "Pengaturan berhasil disimpan",
+    "copiedToClipboard": "Tersalin ke papan klip",
+    "clearedSuccess": "Riwayat berhasil dihapus"
+  },
+  "seo": {
+    "defaultTitle": "SoufTools — Platform AI Kelas Dunia Performa Ultra",
+    "defaultDescription": "Platform AI generasi berikutnya dengan obrolan multi-model, pembuat gambar, pencarian web, dan agen kode."
+  }
+}

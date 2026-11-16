@@ -1,0 +1,205 @@
+{
+  "common": {
+    "appName": "SoufTools",
+    "tagline": "世界级超高性能人工智能平台",
+    "subtitle": "体验顶尖 AI 模型，具备超高速率、实时网络搜索和全球多语言智能",
+    "startChat": "立即开始对话",
+    "exploreAdmin": "管理控制台",
+    "newChat": "新建对话",
+    "history": "历史记录",
+    "settings": "系统设置",
+    "adminPanel": "管理面板",
+    "login": "登录",
+    "logout": "退出登录",
+    "selectModel": "选择模型",
+    "webSearch": "实时联网搜索",
+    "searchPlaceholder": "向 SoufAI 提问或输入指令...",
+    "send": "发送",
+    "copy": "复制",
+    "copied": "已复制！",
+    "retry": "重试",
+    "clearHistory": "清除历史",
+    "noHistory": "暂无历史对话",
+    "activeStatus": "运行正常",
+    "busyStatus": "服务繁忙",
+    "cancel": "取消",
+    "save": "保存更改",
+    "loading": "加载中...",
+    "success": "操作成功",
+    "error": "发生错误，请重试。"
+  },
+  "navigation": {
+    "home": "首页",
+    "chat": "AI 对话",
+    "tools": "工具目录",
+    "calculator": "Token 计算器",
+    "pricing": "价格方案",
+    "about": "关于我们",
+    "privacy": "隐私政策",
+    "terms": "服务条款",
+    "admin": "管理中心"
+  },
+  "auth": {
+    "title": "欢迎回来",
+    "subtitle": "登录以访问保存的会话和专属 AI 记忆",
+    "googleLogin": "使用 Google 账号登录",
+    "githubLogin": "使用 GitHub 账号登录",
+    "emailLabel": "电子邮件",
+    "passwordLabel": "密码",
+    "phoneLabel": "手机号码",
+    "phoneLogin": "短信验证码登录",
+    "or": "或",
+    "submitLogin": "登录",
+    "submitRegister": "创建免费账号",
+    "toggleRegister": "还没有账号？立即注册",
+    "toggleLogin": "已有账号？直接登录"
+  },
+  "home": {
+    "heroBadge": "SoufTools v10.0 — 全球多语言人工智能",
+    "heroTitle": "一站式全球智能 AI 平台",
+    "heroDesc": "超快推理速度、实时网页归因搜索、沙盒代码实时预览与 4K 图像生成。",
+    "ctaStart": "进入工作区",
+    "ctaExplore": "探索所有工具",
+    "featureChatTitle": "多模型 AI 对话",
+    "featureChatDesc": "在 SoufAI Spark、Core、Pro、Coder 和 Ultra 之间无缝切换。",
+    "featureImageTitle": "AI 图像生成与局部重绘",
+    "featureImageDesc": "创作 4K 艺术作品并交互式编辑图像选区。",
+    "featureSearchTitle": "实时网页归因搜索",
+    "featureSearchDesc": "融合来源验证的实时网页搜索结果。",
+    "featureCodingTitle": "AI 智能体与沙盒预览",
+    "featureCodingDesc": "在安全云沙盒中实时执行与预览全栈代码。"
+  },
+  "chat": {
+    "newConversation": "新建对话",
+    "start": "开始对话",
+    "stop": "停止生成",
+    "placeholder": "向 SoufAI 提问或粘贴代码...",
+    "attachFile": "上传文件或图片",
+    "enableWebSearch": "开启实时联网搜索",
+    "modelSelectorTitle": "选择模型引擎",
+    "memoryActive": "AI 记忆已启用",
+    "tokensUsed": "Token 消耗",
+    "thinking": "正在推理分析...",
+    "emptyStateTitle": "今天你想构建什么？",
+    "emptyStateDesc": "选择预设模板或使用任意语言提出您的问题。"
+  },
+  "agent": {
+    "thinking": "SoufAI 智能体正在分析需求...",
+    "searching": "正在实时搜索网络来源...",
+    "openingSource": "正在读取来源文档...",
+    "readingPage": "正在解析网页内容...",
+    "verifying": "正在验证代码与语法...",
+    "completed": "任务执行完成",
+    "nodabaTitle": "Nodaba 运维智能体",
+    "nodabaDesc": "自动密钥轮换、负载均衡与服务健康监控智能体。"
+  },
+  "tools": {
+    "catalogTitle": "AI 工具与扩展目录",
+    "catalogDesc": "专为开发者、创作者与研究人员设计的专用 AI 引擎。",
+    "launchTool": "启动工具",
+    "exploreGuide": "查看指南",
+    "intentLabel": "主要用途",
+    "categoryLabel": "分类"
+  },
+  "search": {
+    "groundingActive": "实时联网搜索已激活",
+    "sourcesCount": "已验证 {count} 个来源",
+    "searchingQuery": "正在搜索：{query}",
+    "noResults": "未返回实时网页结果"
+  },
+  "sources": {
+    "title": "验证来源与引用",
+    "visitDomain": "访问来源",
+    "citation": "引用 #{index}",
+    "domainVerified": "验证域名"
+  },
+  "files": {
+    "uploadTitle": "拖拽文件至此或点击上传",
+    "maxSize": "最大文件限制：20MB",
+    "supportedFormats": "图片、代码、PDF、TXT、JSON"
+  },
+  "images": {
+    "generatorTitle": "AI 图像生成器",
+    "editorTitle": "AI 局部重绘图像编辑器",
+    "promptPlaceholder": "描述您想生成的图像...",
+    "aspectRatio": "宽高比",
+    "generate": "生成图像",
+    "download": "下载图像"
+  },
+  "coding": {
+    "workspaceTitle": "AI 软件工程工作区",
+    "runCode": "运行代码",
+    "preview": "实时交互预览",
+    "editor": "代码编辑器",
+    "console": "控制台日志",
+    "terminal": "终端"
+  },
+  "preview": {
+    "loading": "正在启动云端沙盒容器...",
+    "ready": "预览已就绪",
+    "error": "编译预览失败"
+  },
+  "settings": {
+    "title": "平台设置",
+    "subtitle": "自定义 AI 行为、默认模型、语音偏好与隐私管理",
+    "language": "界面语言",
+    "theme": "主题样式",
+    "memoryToggle": "启用 AI 记忆",
+    "autoPlayTts": "自动播放语音合成",
+    "clearChats": "清除所有聊天记录",
+    "exportData": "导出我的数据"
+  },
+  "profile": {
+    "account": "账号信息",
+    "email": "注册邮箱",
+    "role": "账号权限",
+    "adminBadge": "管理员权限"
+  },
+  "admin": {
+    "title": "SoufTools 管理控制中心",
+    "accessDenied": "拒绝访问！此页面仅限管理员使用。",
+    "tabs": {
+      "keys": "AI 密钥",
+      "efficiency": "AI 效率",
+      "vision": "视觉 AI",
+      "runtime": "运行环境",
+      "seo": "SEO 管理",
+      "tools": "工具集",
+      "agent": "Nodaba 智能体",
+      "stats": "数据分析",
+      "languages": "语言中心"
+    },
+    "languages": {
+      "title": "全球语言中心与 i18n 架构",
+      "desc": "管理 12 种核心语言、翻译覆盖率审计、功能开关与伪本地化测试。",
+      "overallCoverage": "总体翻译覆盖率",
+      "totalCatalogKeys": "总词典键数",
+      "pseudoToggle": "开启伪本地化测试模式",
+      "runAudit": "运行翻译审计",
+      "missingKeysCount": "缺失键数量"
+    }
+  },
+  "errors": {
+    "network": "网络连接错误，请检查您的网络连接。",
+    "modelUnavailable": "所选模型层级暂不可用。",
+    "toolFailed": "工具执行失败，正在自动重试...",
+    "fileTooLarge": "文件超过 20MB 最大限制。",
+    "unsupportedFile": "不支持的文件格式。",
+    "sessionExpired": "会话已过期，请重新登录。"
+  },
+  "billing": {
+    "freeTier": "永久免费方案",
+    "proTier": "专业开发者方案",
+    "ultraTier": "企业旗舰方案",
+    "upgradeBtn": "升级方案"
+  },
+  "notifications": {
+    "settingsSaved": "设置保存成功",
+    "copiedToClipboard": "已复制到剪贴板",
+    "clearedSuccess": "历史记录清除成功"
+  },
+  "seo": {
+    "defaultTitle": "SoufTools — 世界级超高性能 AI 平台",
+    "defaultDescription": "新一代 AI 平台，包含多模型 AI 对话、图像生成、局部重绘、联网搜索与云端沙盒编程智能体。"
+  }
+}

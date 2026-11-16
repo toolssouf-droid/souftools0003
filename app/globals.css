@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ocean-base: #0a0c10;
+  --color-ocean-surface: #12161f;
+  --color-ocean-border: #1f2633;
+  --color-ocean-primary: #00d4aa;
+  --color-ocean-secondary: #00ff88;
+  --color-ocean-accent: #38bdf8;
+  --color-ocean-text: #f1f5f9;
+  --color-ocean-muted: #64748b;
+}
+
+@layer base {
+  :root {
+    --bg-base: #0a0c10;
+    --bg-surface: #12161f;
+    --bg-border: #1f2633;
+    --color-primary: #00d4aa;
+    --color-secondary: #00ff88;
+    --color-accent: #38bdf8;
+    --text-primary: #f1f5f9;
+    --text-muted: #64748b;
+  }
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0c10;
+}
+::-webkit-scrollbar-thumb {
+  background: #1f2633;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00d4aa;
+}
+
+/* AI Studio Pro Glassmorphism & Glow Effects - Optimized for performance */
+.glass-panel {
+  background: rgba(18, 22, 31, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(31, 38, 51, 0.85);
+  will-change: transform, opacity;
+}
+
+.glass-card {
+  background: rgba(18, 22, 31, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid #1f2633;
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.35);
+}
+
+.glow-teal-active {
+  border-color: #00d4aa !important;
+  box-shadow: 0 0 16px rgba(0, 212, 170, 0.35), inset 0 0 10px rgba(0, 212, 170, 0.1);
+}
+
+.glow-teal-hover:hover {
+  border-color: rgba(0, 212, 170, 0.6);
+  box-shadow: 0 0 14px rgba(0, 212, 170, 0.25);
+}
+
+.text-gradient-teal {
+  background: linear-gradient(135deg, #00d4aa 0%, #38bdf8 50%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Animation utilities */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(0, 212, 170, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(0, 212, 170, 0.7);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
+/* Hide scrollbar for clean horizontal tab scrolling on mobile */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

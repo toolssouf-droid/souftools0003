@@ -1,0 +1,205 @@
+{
+  "common": {
+    "appName": "سوف ٹولز",
+    "tagline": "عالمی معیار کا برتر کارکردگی کا حامل AI پلیٹ فارم",
+    "subtitle": "اعلی ترین رفتار، لائیو ویب تلاش اور کثیر لسانی ذہانت کے ساتھ جدید ترین AI ماڈلز کا تجربہ کریں",
+    "startChat": "ابھی گفتگو شروع کریں",
+    "exploreAdmin": "ایڈمن ڈیش بورڈ",
+    "newChat": "نئی گفتگو",
+    "history": "گفتگو کی ہسٹری",
+    "settings": "سیٹنگز",
+    "adminPanel": "ایڈمن پینل",
+    "login": "سائن ان کریں",
+    "logout": "سائن آؤٹ کریں",
+    "selectModel": "ماڈل منتخب کریں",
+    "webSearch": "لائیو ویب تلاش",
+    "searchPlaceholder": "SoufAI سے کچھ بھی پوچھیں یا سوال درج کریں...",
+    "send": "ارسال کریں",
+    "copy": "کاپی کریں",
+    "copied": "کاپی ہو گیا!",
+    "retry": "دوبارہ کوشش کریں",
+    "clearHistory": "ہسٹری صاف کریں",
+    "noHistory": "کوئی سابقہ ہسٹری نہیں ملی",
+    "activeStatus": "فعال اور تیار",
+    "busyStatus": "سروس عارضی طور پر مصروف ہے",
+    "cancel": "منسوخ کریں",
+    "save": "تبدیلیاں محفوظ کریں",
+    "loading": "لوڈ ہو رہا ہے...",
+    "success": "عمل کامیابی سے مکمل ہوا",
+    "error": "ایک خرابی پیش آئی ہے۔ براہ کرم دوبارہ کوشش کریں۔"
+  },
+  "navigation": {
+    "home": "ہوم",
+    "chat": "AI گفتگو",
+    "tools": "ٹولز ڈائریکٹری",
+    "calculator": "ٹوکن کیلکولیٹر",
+    "pricing": "قیمتیں",
+    "about": "ہمارے بارے میں",
+    "privacy": "پرائیویسی پالیسی",
+    "terms": "استعمال کی شرائط",
+    "admin": "ایڈمن سینٹر"
+  },
+  "auth": {
+    "title": "خوش آمدید",
+    "subtitle": "اپنی محفوظ گفتگو اور AI میموری تک رسائی حاصل کرنے کے لیے سائن ان کریں",
+    "googleLogin": "Google کے ساتھ جاری رکھیں",
+    "githubLogin": "GitHub کے ساتھ جاری رکھیں",
+    "emailLabel": "ای میل ایڈریس",
+    "passwordLabel": "پاس ورڈ",
+    "phoneLabel": "فون نمبر",
+    "phoneLogin": "SMS OTP کے ذریعے لاگ ان کریں",
+    "or": "یا",
+    "submitLogin": "سائن ان کریں",
+    "submitRegister": "مفت اکاؤنٹ بنائیں",
+    "toggleRegister": "اکاؤنٹ نہیں ہے؟ رجسٹر کریں",
+    "toggleLogin": "پہلے سے اکاؤنٹ ہے؟ لاگ ان کریں"
+  },
+  "home": {
+    "heroBadge": "SoufTools v10.0 — کثیر لسانی AI ذہانت",
+    "heroTitle": "عالمی معیار کا جامع AI پلیٹ فارم",
+    "heroDesc": "انتہائی تیز رفتار، تصدیق شدہ ذرائع کے ساتھ لائیو ویب تلاش اور 4K تصویر کی تخلیق۔",
+    "ctaStart": "ورک اسپیس کھولیں",
+    "ctaExplore": "تمام ٹولز دریافت کریں",
+    "featureChatTitle": "ملٹی ماڈل AI گفتگو",
+    "featureChatDesc": "SoufAI Spark, Core, Pro, Coder اور Ultra کے درمیان باآسانی سوئچ کریں۔",
+    "featureImageTitle": "AI تصویر کی تخلیق اور ترمیم",
+    "featureImageDesc": "4K آرٹ بنائیں اور تصویر کے مخصوص حصوں میں ترامیم کریں۔",
+    "featureSearchTitle": "ریئل ٹائم ویب تلاش",
+    "featureSearchDesc": "تصدیق شدہ ویب ذرائع کے ساتھ لائیو نتائج۔",
+    "featureCodingTitle": "AI ایجنٹ اور لائیو پریویو",
+    "featureCodingDesc": "محفوظ کلاؤڈ ماحول میں کوڈ کا نفاذ اور پریویو۔"
+  },
+  "chat": {
+    "newConversation": "نئی گفتگو",
+    "start": "گفتگو شروع کریں",
+    "stop": "جنریشن روکیں",
+    "placeholder": "SoufAI سے کچھ بھی پوچھیں یا کوڈ پیسٹ کریں...",
+    "attachFile": "فائل یا تصویر منسلک کریں",
+    "enableWebSearch": "لائیو ویب تلاش فعال کریں",
+    "modelSelectorTitle": "ماڈل انجن منتخب کریں",
+    "memoryActive": "AI میموری فعال ہے",
+    "tokensUsed": "ٹوکنز",
+    "thinking": "تجزیہ اور سوچ بچار جاری ہے...",
+    "emptyStateTitle": "آج آپ کیا بنانا چاہتے ہیں؟",
+    "emptyStateDesc": "کسی ٹیمپلیٹ کا انتخاب کریں یا کسی بھی زبان میں اپنا سوال پوچھیں۔"
+  },
+  "agent": {
+    "thinking": "SoufAI ایجنٹ درخواست کا تجزیہ کر رہا ہے...",
+    "searching": "لائیو ویب ذرائع میں تلاش جاری ہے...",
+    "openingSource": "ماخذ دستاویز پڑھی جا رہی ہے...",
+    "readingPage": "صفحے کے مواد کا تجزیہ...",
+    "verifying": "کوڈ اور گرامر کی تصدیق...",
+    "completed": "ٹاسک کامیابی سے مکمل ہوا",
+    "nodabaTitle": "ایڈمن ایجنٹ نضابہ",
+    "nodabaDesc": "خودکار کیز روٹیشن اور لوڈ بیلنسنگ ایجنٹ۔"
+  },
+  "tools": {
+    "catalogTitle": "AI ٹولز کی ڈائریکٹری",
+    "catalogDesc": "ڈویلپرز اور محققین کے لیے خصوصی AI انجنز۔",
+    "launchTool": "ٹول چلائیں",
+    "exploreGuide": "ہدایات دیکھیں",
+    "intentLabel": "بنیادی مقصد",
+    "categoryLabel": "زمرہ"
+  },
+  "search": {
+    "groundingActive": "لائیو تلاش فعال ہے",
+    "sourcesCount": "{count} تصدیق شدہ ذرائع",
+    "searchingQuery": "تلاش جاری ہے: {query}",
+    "noResults": "کوئی لائیو نتائج نہیں ملے"
+  },
+  "sources": {
+    "title": "تصدیق شدہ ذرائع اور حوالہ جات",
+    "visitDomain": "ماخذ دیکھئے",
+    "citation": "حوالہ #{index}",
+    "domainVerified": "تصدیق شدہ ڈومین"
+  },
+  "files": {
+    "uploadTitle": "فائلیں یہاں ڈریگ کریں یا منتخب کرنے کے لیے کلک کریں",
+    "maxSize": "زیادہ سے زیادہ فائل سائز: 20MB",
+    "supportedFormats": "تصاویر، کوڈ، PDF، TXT، JSON"
+  },
+  "images": {
+    "generatorTitle": "AI تصویر بنانے والا ٹول",
+    "editorTitle": "AI تصویر میں ترمیم کرنے والا ایڈیٹر",
+    "promptPlaceholder": "جس تصویر کی آپ تخلیق چاہتے ہیں اس کی تفصیل لکھیں...",
+    "aspectRatio": "تصویر کا تناسب",
+    "generate": "تصویر بنائیں",
+    "download": "ڈاؤن لوڈ کریں"
+  },
+  "coding": {
+    "workspaceTitle": "AI سافٹ ویئر انجینئرنگ ورک اسپیس",
+    "runCode": "کوڈ چلائیں",
+    "preview": "لائیو انٹرایکٹو پریویو",
+    "editor": "کوڈ ایڈیٹر",
+    "console": "کنسول لاگز",
+    "terminal": "ٹرمینل"
+  },
+  "preview": {
+    "loading": "کلاؤڈ سیندباکس شروع ہو رہا ہے...",
+    "ready": "پریویو تیار ہے",
+    "error": "کمپائل کرنے میں ناکامی"
+  },
+  "settings": {
+    "title": "پلیٹ فارم کی سیٹنگز",
+    "subtitle": "AI کے رویے، بنیادی ماڈل اور پرائیویسی کو اپنی مرضی کے مطابق ڈھالیں",
+    "language": "انٹرفیس کی زبان",
+    "theme": "تھیم اور ڈیزائن",
+    "memoryToggle": "AI میموری فعال کریں",
+    "autoPlayTts": "خودکار وائس پلے",
+    "clearChats": "تمام ہسٹری صاف کریں",
+    "exportData": "میرا ڈیٹا ایکسپورٹ کریں"
+  },
+  "profile": {
+    "account": "اکاؤنٹ کی معلومات",
+    "email": "رجسٹرڈ ای میل",
+    "role": "اکاؤنٹ کا رول",
+    "adminBadge": "تصدیق شدہ ایڈمن"
+  },
+  "admin": {
+    "title": "ایڈمن کنٹرول سینٹر",
+    "accessDenied": "رسائی کی اجازت نہیں ہے! صرف ایڈمنز کے لیے۔",
+    "tabs": {
+      "keys": "AI کیز",
+      "efficiency": "کارکردگی",
+      "vision": "ویژن AI",
+      "runtime": "رن ٹائم",
+      "seo": "SEO مینیجر",
+      "tools": "ٹولز",
+      "agent": "ایجنٹ نضابہ",
+      "stats": "شماریات",
+      "languages": "زبان کا سینٹر"
+    },
+    "languages": {
+      "title": "عالمی لینگویج سینٹر اور i18n فن تعمیر",
+      "desc": "12 بنیادی زبانوں، ترجمے کی کوریج اور ٹیسٹنگ کے طریقوں کا انتظام کریں۔",
+      "overallCoverage": "ترجمے کی مجموعی کوریج",
+      "totalCatalogKeys": "کل کیز",
+      "pseudoToggle": "پسیوڈو لوکلائزیشن موڈ",
+      "runAudit": "آڈٹ چلائیں",
+      "missingKeysCount": "گمشدہ کیز"
+    }
+  },
+  "errors": {
+    "network": "نیٹ ورک کنیکشن میں خرابی۔",
+    "modelUnavailable": "منتخب کردہ ماڈل عارضی طور پر دستیاب نہیں ہے۔",
+    "toolFailed": "ٹول چلانے میں ناکامی۔ دوبارہ کوشش کی جا رہی ہے...",
+    "fileTooLarge": "فائل کا سائز 20MB سے زیادہ ہے۔",
+    "unsupportedFile": "غیر معاون فائل فارمیٹ۔",
+    "sessionExpired": "سیشن ختم ہو گیا۔ دوبارہ لاگ ان کریں۔"
+  },
+  "billing": {
+    "freeTier": "مفت پلان",
+    "proTier": "پرو ڈویلپر پلان",
+    "ultraTier": "انٹرپرائز الٹرا پلان",
+    "upgradeBtn": "پلان اپ گریڈ کریں"
+  },
+  "notifications": {
+    "settingsSaved": "سیٹنگز محفوظ ہو گئیں",
+    "copiedToClipboard": "کلپ بورڈ پر کاپی ہو گیا",
+    "clearedSuccess": "ہسٹری کامیابی سے صاف ہو گئی"
+  },
+  "seo": {
+    "defaultTitle": "سوف ٹولز — عالمی معیار کا AI پلیٹ فارم",
+    "defaultDescription": "نئی نسل کا AI پلیٹ فارم: ملٹی ماڈل گفتگو، امیج جنریٹر، ویب تلاش اور کوڈ ایجنٹ۔"
+  }
+}

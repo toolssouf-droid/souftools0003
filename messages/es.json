@@ -1,0 +1,205 @@
+{
+  "common": {
+    "appName": "SoufTools",
+    "tagline": "Plataforma IA Global de Ultra Rendimiento",
+    "subtitle": "Experimenta modelos de IA de nivel superior con velocidad ultra rápida, búsqueda en tiempo real e inteligencia multilingüe",
+    "startChat": "Iniciar Chat Ahora",
+    "exploreAdmin": "Panel de Administración",
+    "newChat": "Nuevo Chat",
+    "history": "Historial de Chat",
+    "settings": "Configuración",
+    "adminPanel": "Panel de Control",
+    "login": "Iniciar Sesión",
+    "logout": "Cerrar Sesión",
+    "selectModel": "Seleccionar Modelo",
+    "webSearch": "Búsqueda Web",
+    "searchPlaceholder": "Pregunta cualquier cosa a SoufAI...",
+    "send": "Enviar",
+    "copy": "Copiar",
+    "copied": "¡Copiado!",
+    "retry": "Reintentar",
+    "clearHistory": "Borrar Historial",
+    "noHistory": "No hay historial previo",
+    "activeStatus": "Activo y Listo",
+    "busyStatus": "Servicio Temporalmente Ocupado",
+    "cancel": "Cancelar",
+    "save": "Guardar Cambios",
+    "loading": "Cargando...",
+    "success": "Operación completada con éxito",
+    "error": "Ocurrió un error. Por favor intente de nuevo."
+  },
+  "navigation": {
+    "home": "Inicio",
+    "chat": "Chat IA",
+    "tools": "Catálogo de Herramientas",
+    "calculator": "Calculadora de Tokens",
+    "pricing": "Precios",
+    "about": "Nosotros",
+    "privacy": "Privacidad",
+    "terms": "Términos",
+    "admin": "Centro de Administración"
+  },
+  "auth": {
+    "title": "Bienvenido de nuevo",
+    "subtitle": "Inicia sesión para acceder a tus sesiones e historial de memoria IA",
+    "googleLogin": "Continuar con Google",
+    "githubLogin": "Continuar con GitHub",
+    "emailLabel": "Correo Electrónico",
+    "passwordLabel": "Contraseña",
+    "phoneLabel": "Número de Teléfono",
+    "phoneLogin": "Acceso por SMS OTP",
+    "or": "O",
+    "submitLogin": "Iniciar Sesión",
+    "submitRegister": "Crear Cuenta Gratis",
+    "toggleRegister": "¿No tienes cuenta? Regístrate",
+    "toggleLogin": "¿Ya tienes cuenta? Inicia sesión"
+  },
+  "home": {
+    "heroBadge": "SoufTools v10.0 — IA Multilingüe Global",
+    "heroTitle": "La Plataforma Integral de IA Inteligente Global",
+    "heroDesc": "Inferencia ultra rápida, búsqueda web en vivo con fuentes verificadas, vista previa en espacio aislado y generación de imágenes en 4K.",
+    "ctaStart": "Abrir Espacio de Trabajo",
+    "ctaExplore": "Explorar Herramientas",
+    "featureChatTitle": "Chat IA Multi-Modelo",
+    "featureChatDesc": "Cambia fluidamente entre modelos SoufAI Spark, Core, Pro, Coder y Ultra.",
+    "featureImageTitle": "Generación y Edición de Imágenes IA",
+    "featureImageDesc": "Crea arte 4K y edita áreas específicas del lienzo de forma interactiva.",
+    "featureSearchTitle": "Búsqueda Web en Tiempo Real",
+    "featureSearchDesc": "Resultados de la web sintetizados con citas verificadas de fuentes.",
+    "featureCodingTitle": "Agente IA y Vista Previa Aislada",
+    "featureCodingDesc": "Ejecución de código en contenedores seguros en la nube."
+  },
+  "chat": {
+    "newConversation": "Nueva Conversación",
+    "start": "Iniciar Chat",
+    "stop": "Detener Generación",
+    "placeholder": "Pregunta a SoufAI o pega tu código...",
+    "attachFile": "Adjuntar Archivo o Imagen",
+    "enableWebSearch": "Activar Búsqueda Web",
+    "modelSelectorTitle": "Seleccionar Motor de Modelo",
+    "memoryActive": "Memoria IA Activa",
+    "tokensUsed": "Tokens",
+    "thinking": "Razonando y Analizando...",
+    "emptyStateTitle": "¿Qué te gustaría construir hoy?",
+    "emptyStateDesc": "Selecciona una plantilla o realiza tu consulta en cualquier idioma."
+  },
+  "agent": {
+    "thinking": "El agente SoufAI está analizando la solicitud...",
+    "searching": "Buscando en fuentes en vivo...",
+    "openingSource": "Leyendo documento fuente...",
+    "readingPage": "Analizando contenido de la página...",
+    "verifying": "Verificando código y sintaxis...",
+    "completed": "Ejecución completada con éxito",
+    "nodabaTitle": "Agente Administrativo Nodaba",
+    "nodabaDesc": "Agente de rotación de claves, balanceo de carga y monitoreo de salud."
+  },
+  "tools": {
+    "catalogTitle": "Catálogo de Herramientas IA",
+    "catalogDesc": "Motores de IA diseñados para desarrolladores, creadores e investigadores.",
+    "launchTool": "Iniciar Herramienta",
+    "exploreGuide": "Ver Guía",
+    "intentLabel": "Propósito Principal",
+    "categoryLabel": "Categoría"
+  },
+  "search": {
+    "groundingActive": "Búsqueda Web Activa",
+    "sourcesCount": "{count} Fuentes Verificadas",
+    "searchingQuery": "Buscando: {query}",
+    "noResults": "No se encontraron resultados web"
+  },
+  "sources": {
+    "title": "Fuentes Verificadas y Citas",
+    "visitDomain": "Visitar Fuente",
+    "citation": "Cita #{index}",
+    "domainVerified": "Dominio Verificado"
+  },
+  "files": {
+    "uploadTitle": "Arrastra archivos aquí o haz clic para buscar",
+    "maxSize": "Tamaño máximo: 20MB",
+    "supportedFormats": "Imágenes, Código, PDF, TXT, JSON"
+  },
+  "images": {
+    "generatorTitle": "Generador de Imágenes IA",
+    "editorTitle": "Editor de Retoque Digital IA",
+    "promptPlaceholder": "Describe la imagen que deseas crear...",
+    "aspectRatio": "Relación de Aspecto",
+    "generate": "Generar Imagen",
+    "download": "Descargar Imagen"
+  },
+  "coding": {
+    "workspaceTitle": "Espacio de Ingeniería de Software IA",
+    "runCode": "Ejecutar Código",
+    "preview": "Vista Previa Interactiva",
+    "editor": "Editor de Código",
+    "console": "Consola de Errores",
+    "terminal": "Terminal"
+  },
+  "preview": {
+    "loading": "Iniciando Contenedor en la Nube...",
+    "ready": "Vista Previa Lista",
+    "error": "Error al compilar vista previa"
+  },
+  "settings": {
+    "title": "Configuración de la Plataforma",
+    "subtitle": "Personaliza comportamiento de IA, modelo predeterminado y privacidad",
+    "language": "Idioma de la Interfaz",
+    "theme": "Tema y Estilos",
+    "memoryToggle": "Activar Memoria IA",
+    "autoPlayTts": "Reproducción Automática de Voz",
+    "clearChats": "Borrar Historial de Chat",
+    "exportData": "Exportar Mis Datos"
+  },
+  "profile": {
+    "account": "Información de la Cuenta",
+    "email": "Correo Registrado",
+    "role": "Rol de la Cuenta",
+    "adminBadge": "Administrador Autorizado"
+  },
+  "admin": {
+    "title": "Centro de Control de Administración",
+    "accessDenied": "¡Acceso denegado! Exclusivo para administradores.",
+    "tabs": {
+      "keys": "Claves IA",
+      "efficiency": "Eficiencia IA",
+      "vision": "Visión IA",
+      "runtime": "Entorno",
+      "seo": "Gestor SEO",
+      "tools": "Herramientas",
+      "agent": "Agente Nodaba",
+      "stats": "Estadísticas",
+      "languages": "Centro de Idiomas"
+    },
+    "languages": {
+      "title": "Centro de Idiomas Global y Arquitectura i18n",
+      "desc": "Gestiona 12 idiomas principales, auditoría de cobertura, indicadores y pruebas de localización.",
+      "overallCoverage": "Cobertura Global de Traducción",
+      "totalCatalogKeys": "Total de Claves",
+      "pseudoToggle": "Modo de Prueba Pseudo-Localización",
+      "runAudit": "Ejecutar Auditoría",
+      "missingKeysCount": "Claves Faltantes"
+    }
+  },
+  "errors": {
+    "network": "Error de conexión de red. Compruebe su conexión a internet.",
+    "modelUnavailable": "El modelo seleccionado no está disponible temporalmente.",
+    "toolFailed": "Falló la ejecución de la herramienta. Reintentando...",
+    "fileTooLarge": "El archivo excede el límite de 20MB.",
+    "unsupportedFile": "Formato de archivo no soportado.",
+    "sessionExpired": "Sesión expirada. Por favor inicie sesión de nuevo."
+  },
+  "billing": {
+    "freeTier": "Plan Gratuito",
+    "proTier": "Plan Profesional",
+    "ultraTier": "Plan Empresarial Ultra",
+    "upgradeBtn": "Mejorar Plan"
+  },
+  "notifications": {
+    "settingsSaved": "Configuración guardada",
+    "copiedToClipboard": "Copiado al portapapeles",
+    "clearedSuccess": "Historial borrado con éxito"
+  },
+  "seo": {
+    "defaultTitle": "SoufTools — Plataforma Global de IA de Ultra Rendimiento",
+    "defaultDescription": "Plataforma de IA de nueva generación con chat multi-modelo, generador de imágenes, editor digital, búsqueda web y agente de código."
+  }
+}

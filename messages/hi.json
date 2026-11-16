@@ -1,0 +1,205 @@
+{
+  "common": {
+    "appName": "SoufTools",
+    "tagline": "विश्वस्तरीय अति-उच्च प्रदर्शन AI प्लेटफ़ॉर्म",
+    "subtitle": "अल्ट्रा-फास्ट स्पीड, लाइव वेब सर्च और बहुभाषी बुद्धिमत्ता के साथ शीर्ष AI मॉडल का अनुभव करें",
+    "startChat": "अभी चैट शुरू करें",
+    "exploreAdmin": "एडमिन डैशबोर्ड",
+    "newChat": "नई चैट",
+    "history": "चैट इतिहास",
+    "settings": "सेटिंग्स",
+    "adminPanel": "एडमिन पैनल",
+    "login": "लॉग इन करें",
+    "logout": "लॉग आउट करें",
+    "selectModel": "मॉडल चुनें",
+    "webSearch": "लाइव वेब खोज",
+    "searchPlaceholder": "SoufAI से कुछ भी पूछें...",
+    "send": "भेजें",
+    "copy": "कॉपी करें",
+    "copied": "कॉपी हो गया!",
+    "retry": "पुनः प्रयास करें",
+    "clearHistory": "इतिहास साफ करें",
+    "noHistory": "कोई पिछला इतिहास नहीं मिला",
+    "activeStatus": "सक्रिय और तैयार",
+    "busyStatus": "सेवा अस्थायी रूप से व्यस्त है",
+    "cancel": "रद्द करें",
+    "save": "परिवर्तन सहेजें",
+    "loading": "लोड हो रहा है...",
+    "success": "कार्रवाई सफलतापूर्वक पूर्ण हुई",
+    "error": "एक त्रुटि हुई। कृपया पुनः प्रयास करें।"
+  },
+  "navigation": {
+    "home": "होम",
+    "chat": "AI चैट",
+    "tools": "टूल कैटलॉग",
+    "calculator": "टोकन कैलकुलेटर",
+    "pricing": "मूल्य निर्धारण",
+    "about": "हमारे बारे में",
+    "privacy": "गोपनीयता नीति",
+    "terms": "सेवा की शर्तें",
+    "admin": "एडमिन केंद्र"
+  },
+  "auth": {
+    "title": "वापसी पर आपका स्वागत है",
+    "subtitle": "सहेजे गए सत्रों और AI मेमोरी तक पहुँचने के लिए लॉग इन करें",
+    "googleLogin": "Google के साथ जारी रखें",
+    "githubLogin": "GitHub के साथ जारी रखें",
+    "emailLabel": "ईमेल पता",
+    "passwordLabel": "पासवर्ड",
+    "phoneLabel": "फ़ोन नंबर",
+    "phoneLogin": "SMS OTP द्वारा लॉग इन करें",
+    "or": "या",
+    "submitLogin": "लॉग इन करें",
+    "submitRegister": "निःशुल्क खाता बनाएं",
+    "toggleRegister": "खाता नहीं है? साइन अप करें",
+    "toggleLogin": "पहले से पंजीकृत हैं? लॉग इन करें"
+  },
+  "home": {
+    "heroBadge": "SoufTools v10.0 — ग्लोबल बहुभाषी AI",
+    "heroTitle": "ऑल-इन-वन ग्लोबल इंटेलिजेंट AI प्लेटफ़ॉर्म",
+    "heroDesc": "अति-तेज अनुमान, सत्यापित स्रोतों के साथ लाइव वेब सर्च और 4K छवि निर्माण।",
+    "ctaStart": "वर्कस्पेस खोलें",
+    "ctaExplore": "सभी टूल्स देखें",
+    "featureChatTitle": "मल्टी-मॉडल AI चैट",
+    "featureChatDesc": "SoufAI Spark, Core, Pro, Coder और Ultra मॉडल के बीच आसानी से स्विच करें।",
+    "featureImageTitle": "AI छवि निर्माण और संपादन",
+    "featureImageDesc": "4K कलाकृति बनाएं और विशिष्ट कैनवास क्षेत्रों को संपादित करें।",
+    "featureSearchTitle": "रियल-टाइम वेब खोज",
+    "featureSearchDesc": "सत्यापित स्रोतों के साथ लाइव खोज परिणाम।",
+    "featureCodingTitle": "AI एजेंट और सुरक्षित पूर्वावलोकन",
+    "featureCodingDesc": "सुरक्षित क्लाउड कंटेनरों में फुल-स्टैक कोड निष्पादन।"
+  },
+  "chat": {
+    "newConversation": "नई बातचीत",
+    "start": "चैट शुरू करें",
+    "stop": "जनरेशन रोकें",
+    "placeholder": "SoufAI से कुछ भी पूछें...",
+    "attachFile": "फ़ाइल या छवि संलग्न करें",
+    "enableWebSearch": "वेब खोज सक्षम करें",
+    "modelSelectorTitle": "मॉडल इंजन चुनें",
+    "memoryActive": "AI मेमोरी सक्रिय",
+    "tokensUsed": "टोकन",
+    "thinking": "विश्लेषण किया जा रहा है...",
+    "emptyStateTitle": "आज आप क्या बनाना चाहते हैं?",
+    "emptyStateDesc": "कोई टेम्प्लेट चुनें या किसी भी भाषा में अपना प्रश्न पूछें।"
+  },
+  "agent": {
+    "thinking": "SoufAI एजेंट अनुरोध का विश्लेषण कर रहा है...",
+    "searching": "वेब स्रोतों की खोज की जा रही है...",
+    "openingSource": "स्रोत दस्तावेज़ पढ़ा जा रहा है...",
+    "readingPage": "सामग्री का विश्लेषण किया जा रहा है...",
+    "verifying": "कोड का सत्यापन किया जा रहा है...",
+    "completed": "कार्य सफलतापूर्वक पूर्ण हुआ",
+    "nodabaTitle": "नोडाबा एडमिन एजेंट",
+    "nodabaDesc": "स्वचालित कुंजी रोटेशन, लोड बैलेंसिंग और मॉनिटरिंग एजेंट।"
+  },
+  "tools": {
+    "catalogTitle": "AI टूल कैटलॉग",
+    "catalogDesc": "डेवलपर्स और शोधकर्ताओं के लिए विशेष AI इंजन।",
+    "launchTool": "टूल लॉन्च करें",
+    "exploreGuide": "गाइड देखें",
+    "intentLabel": "प्राथमिक उद्देश्य",
+    "categoryLabel": "श्रेणी"
+  },
+  "search": {
+    "groundingActive": "लाइव खोज सक्रिय",
+    "sourcesCount": "{count} स्रोत सत्यापित",
+    "searchingQuery": "खोजा जा रहा है: {query}",
+    "noResults": "कोई वेब परिणाम नहीं मिला"
+  },
+  "sources": {
+    "title": "सत्यापित स्रोत और संदर्भ",
+    "visitDomain": "स्रोत पर जाएं",
+    "citation": "संदर्भ #{index}",
+    "domainVerified": "सत्यापित डोमेन"
+  },
+  "files": {
+    "uploadTitle": "यहाँ फ़ाइलें ड्रैग करें या चुनने के लिए क्लिक करें",
+    "maxSize": "अधिकतम फ़ाइल आकार: 20MB",
+    "supportedFormats": "इमेजिस, कोड, PDF, TXT, JSON"
+  },
+  "images": {
+    "generatorTitle": "AI छवि जनरेटर",
+    "editorTitle": "AI इनपेंटिंग फोटो एडिटर",
+    "promptPlaceholder": "आप जो छवि बनाना चाहते हैं उसका वर्णन करें...",
+    "aspectRatio": "अस्पेक्ट रेशियो",
+    "generate": "छवि उत्पन्न करें",
+    "download": "डाउनलोड करें"
+  },
+  "coding": {
+    "workspaceTitle": "AI सॉफ्टवेयर इंजीनियरिंग वर्कस्पेस",
+    "runCode": "कोड चलाएं",
+    "preview": "लाइव पूर्वावलोकन",
+    "editor": "कोड एडिटर",
+    "console": "कंसोल लॉग",
+    "terminal": "टर्मिनल"
+  },
+  "preview": {
+    "loading": "क्लाउड सैंडबॉक्स शुरू हो रहा है...",
+    "ready": "पूर्वावलोकन तैयार है",
+    "error": "पूर्वावलोकन संकलित करने में विफल"
+  },
+  "settings": {
+    "title": "प्लेटफ़ॉर्म सेटिंग्स",
+    "subtitle": "AI व्यवहार और अपनी प्राथमिकताओं को अनुकूलित करें",
+    "language": "इंटरफ़ेस भाषा",
+    "theme": "थीम और स्टाइल",
+    "memoryToggle": "AI मेमोरी सक्षम करें",
+    "autoPlayTts": "ऑटो-प्ले टेक्स्ट-टू-स्पीच",
+    "clearChats": "सभी चैट इतिहास साफ करें",
+    "exportData": "मेरा डेटा निर्यात करें"
+  },
+  "profile": {
+    "account": "खाता जानकारी",
+    "email": "पंजीकृत ईमेल",
+    "role": "खाता भूमिका",
+    "adminBadge": "अधिकृत प्रशासक"
+  },
+  "admin": {
+    "title": "एडमिन कंट्रोल सेंटर",
+    "accessDenied": "पहुँच अस्वीकृत! केवल प्रशासकों के लिए।",
+    "tabs": {
+      "keys": "AI कुंजियाँ",
+      "efficiency": "दक्षता",
+      "vision": "विज़न AI",
+      "runtime": "रनटाइम",
+      "seo": "SEO मैनेजर",
+      "tools": "टूल्स",
+      "agent": "नोडाबा एजेंट",
+      "stats": "आंकड़े",
+      "languages": "भाषा केंद्र"
+    },
+    "languages": {
+      "title": "वैश्विक भाषा केंद्र और i18n आर्किटेक्चर",
+      "desc": "12 मुख्य भाषाओं, अनुवाद कवरेज ऑडिट और छद्म-स्थानीयकरण का प्रबंधन करें।",
+      "overallCoverage": "कुल अनुवाद कवरेज",
+      "totalCatalogKeys": "कुल शब्दकोश कुंजियाँ",
+      "pseudoToggle": "छद्म-स्थानीयकरण मोड",
+      "runAudit": "ऑडिट चलाएं",
+      "missingKeysCount": "लापता कुंजियाँ"
+    }
+  },
+  "errors": {
+    "network": "नेटवर्क कनेक्शन त्रुटि।",
+    "modelUnavailable": "चयनित मॉडल अस्थायी रूप से अनुपलब्ध है।",
+    "toolFailed": "टूल निष्पादन विफल। पुनः प्रयास किया जा रहा है...",
+    "fileTooLarge": "फ़ाइल 20MB सीमा से अधिक है।",
+    "unsupportedFile": "असमर्थित फ़ाइल प्रारूप।",
+    "sessionExpired": "सत्र समाप्त हो गया। कृपया पुनः लॉग इन करें।"
+  },
+  "billing": {
+    "freeTier": "निःशुल्क प्लान",
+    "proTier": "प्रो डेवलपर प्लान",
+    "ultraTier": "एंटरप्राइज अल्ट्रा प्लान",
+    "upgradeBtn": "अपग्रेड करें"
+  },
+  "notifications": {
+    "settingsSaved": "सेटिंग्स सहेजी गईं",
+    "copiedToClipboard": "क्लिपबोर्ड पर कॉपी किया गया",
+    "clearedSuccess": "इतिहास सफलतापूर्वक साफ किया गया"
+  },
+  "seo": {
+    "defaultTitle": "SoufTools — विश्वस्तरीय अति-उच्च प्रदर्शन AI प्लेटफ़ॉर्म",
+    "defaultDescription": "अगली पीढ़ी का AI प्लेटफ़ॉर्म: मल्टी-मॉडल चैट, इमेज जनरेटर, वेब सर्च और कोड एजेंट।"
+  }
+}

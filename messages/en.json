@@ -1,0 +1,205 @@
+{
+  "common": {
+    "appName": "SoufTools",
+    "tagline": "World-Class Ultra Performance AI Platform",
+    "subtitle": "Experience top-tier AI models with ultra speed, live grounding, and global multi-language intelligence",
+    "startChat": "Start Chatting Now",
+    "exploreAdmin": "Admin Dashboard",
+    "newChat": "New Chat",
+    "history": "Chat History",
+    "settings": "Settings",
+    "adminPanel": "Admin Panel",
+    "login": "Sign In",
+    "logout": "Sign Out",
+    "selectModel": "Select Model",
+    "webSearch": "Web Search",
+    "searchPlaceholder": "Ask SoufAI anything or send a query...",
+    "send": "Send",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "retry": "Retry",
+    "clearHistory": "Clear History",
+    "noHistory": "No previous chat history found",
+    "activeStatus": "Active & Ready",
+    "busyStatus": "Service Temporarily Busy",
+    "cancel": "Cancel",
+    "save": "Save Changes",
+    "loading": "Loading...",
+    "success": "Operation completed successfully",
+    "error": "An error occurred. Please try again."
+  },
+  "navigation": {
+    "home": "Home",
+    "chat": "AI Chat",
+    "tools": "Tools Catalog",
+    "calculator": "Token Calculator",
+    "pricing": "Pricing",
+    "about": "About",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "admin": "Admin Center"
+  },
+  "auth": {
+    "title": "Welcome Back",
+    "subtitle": "Sign in to access your saved sessions and custom AI memory",
+    "googleLogin": "Continue with Google",
+    "githubLogin": "Continue with GitHub",
+    "emailLabel": "Email Address",
+    "passwordLabel": "Password",
+    "phoneLabel": "Phone Number",
+    "phoneLogin": "Login via SMS OTP",
+    "or": "OR",
+    "submitLogin": "Sign In",
+    "submitRegister": "Create Free Account",
+    "toggleRegister": "Don't have an account? Sign Up",
+    "toggleLogin": "Already registered? Sign In"
+  },
+  "home": {
+    "heroBadge": "SoufTools v10.0 — Next-Gen Multilingual AI",
+    "heroTitle": "The All-in-One Global Intelligent AI Platform",
+    "heroDesc": "Ultra-fast inference, real-time web grounding, sandboxed code preview, and image generation powered by 40+ AI model providers.",
+    "ctaStart": "Launch Workspace",
+    "ctaExplore": "Explore All Tools",
+    "featureChatTitle": "Multi-Model AI Chat",
+    "featureChatDesc": "Switch seamlessly between SoufAI Spark, Core, Pro, Coder, and Ultra models.",
+    "featureImageTitle": "AI Image & Inpainting Editor",
+    "featureImageDesc": "Generate 4K visual art and edit specific canvas regions interactively.",
+    "featureSearchTitle": "Real-Time Web Grounding",
+    "featureSearchDesc": "Live web search synthesized with verified source citations.",
+    "featureCodingTitle": "AI Agent & Sandboxed Preview",
+    "featureCodingDesc": "Full-stack code execution inside sandboxed Cloud environments."
+  },
+  "chat": {
+    "newConversation": "New Conversation",
+    "start": "Start Chat",
+    "stop": "Stop Generating",
+    "placeholder": "Ask SoufAI anything or paste code...",
+    "attachFile": "Attach File or Image",
+    "enableWebSearch": "Enable Live Web Search",
+    "modelSelectorTitle": "Select Model Engine",
+    "memoryActive": "AI Memory Active",
+    "tokensUsed": "Tokens",
+    "thinking": "Reasoning & Analyzing...",
+    "emptyStateTitle": "What would you like to build today?",
+    "emptyStateDesc": "Select a prompt template or ask your question in any language."
+  },
+  "agent": {
+    "thinking": "SoufAI Agent is analyzing the request...",
+    "searching": "Searching live web sources...",
+    "openingSource": "Reading source document...",
+    "readingPage": "Parsing webpage content...",
+    "verifying": "Verifying code & syntax...",
+    "completed": "Task execution completed successfully",
+    "nodabaTitle": "Nodaba Admin Agent",
+    "nodabaDesc": "Automated key rotation, load balancing, and health monitoring agent."
+  },
+  "tools": {
+    "catalogTitle": "AI Tools & Extensions Catalog",
+    "catalogDesc": "Specialized AI engines engineered for developers, creators, and researchers.",
+    "launchTool": "Launch Tool",
+    "exploreGuide": "Explore Guide",
+    "intentLabel": "Primary Intent",
+    "categoryLabel": "Category"
+  },
+  "search": {
+    "groundingActive": "Live Search Active",
+    "sourcesCount": "{count} Sources Verified",
+    "searchingQuery": "Searching: {query}",
+    "noResults": "No live web results returned"
+  },
+  "sources": {
+    "title": "Verified Sources & References",
+    "visitDomain": "Visit Source",
+    "citation": "Citation #{index}",
+    "domainVerified": "Verified Domain"
+  },
+  "files": {
+    "uploadTitle": "Drop files here or click to browse",
+    "maxSize": "Max file size: 20MB",
+    "supportedFormats": "Images, Code, PDF, TXT, JSON"
+  },
+  "images": {
+    "generatorTitle": "AI Image Generator",
+    "editorTitle": "AI Inpainting Photo Editor",
+    "promptPlaceholder": "Describe the image you want to create...",
+    "aspectRatio": "Aspect Ratio",
+    "generate": "Generate Image",
+    "download": "Download Image"
+  },
+  "coding": {
+    "workspaceTitle": "AI Software Engineering Workspace",
+    "runCode": "Run Code",
+    "preview": "Live Interactive Preview",
+    "editor": "Code Editor",
+    "console": "Console Logs",
+    "terminal": "Terminal"
+  },
+  "preview": {
+    "loading": "Starting Cloud Sandbox Container...",
+    "ready": "Preview Ready",
+    "error": "Failed to compile preview"
+  },
+  "settings": {
+    "title": "Platform Settings",
+    "subtitle": "Customize AI behavior, default model, audio preferences, and privacy",
+    "language": "Interface Language",
+    "theme": "Theme & Styling",
+    "memoryToggle": "Enable AI Memory",
+    "autoPlayTts": "Auto-play Text-to-Speech",
+    "clearChats": "Clear All Chat History",
+    "exportData": "Export My Data"
+  },
+  "profile": {
+    "account": "Account Info",
+    "email": "Registered Email",
+    "role": "Account Role",
+    "adminBadge": "Admin Authorized"
+  },
+  "admin": {
+    "title": "SoufTools Admin Control Center",
+    "accessDenied": "Access Restricted! Authorized for Admin only.",
+    "tabs": {
+      "keys": "AI Keys",
+      "efficiency": "AI Efficiency",
+      "vision": "Vision AI",
+      "runtime": "Runtime",
+      "seo": "SEO Manager",
+      "tools": "Tools",
+      "agent": "Agent Nodaba",
+      "stats": "Analytics",
+      "languages": "Language Center"
+    },
+    "languages": {
+      "title": "Global Language Center & i18n Architecture",
+      "desc": "Manage 12 core languages, translation coverage audits, feature flags, and pseudo-localization testing.",
+      "overallCoverage": "Overall Translation Coverage",
+      "totalCatalogKeys": "Total Catalog Keys",
+      "pseudoToggle": "Enable Pseudo-Localization Mode",
+      "runAudit": "Run Translation Audit",
+      "missingKeysCount": "Missing Keys Identified"
+    }
+  },
+  "errors": {
+    "network": "Network connection error. Please check your internet connection.",
+    "modelUnavailable": "Selected model tier is temporarily unavailable.",
+    "toolFailed": "Tool execution failed. Retrying automatically...",
+    "fileTooLarge": "File exceeds the maximum size limit of 20MB.",
+    "unsupportedFile": "Unsupported file format.",
+    "sessionExpired": "Session expired. Please sign in again."
+  },
+  "billing": {
+    "freeTier": "Free Forever Plan",
+    "proTier": "Pro Developer Tier",
+    "ultraTier": "Enterprise Ultra Tier",
+    "upgradeBtn": "Upgrade Plan"
+  },
+  "notifications": {
+    "settingsSaved": "Settings saved successfully",
+    "copiedToClipboard": "Copied to clipboard",
+    "clearedSuccess": "History cleared successfully"
+  },
+  "seo": {
+    "defaultTitle": "SoufTools — World-Class Intelligent AI Platform",
+    "defaultDescription": "Next-generation AI platform featuring multi-model AI chat, text-to-image generator, photo inpainting editor, grounded web search, and sandboxed AI coding agent."
+  }
+}

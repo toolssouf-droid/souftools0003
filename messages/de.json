@@ -1,0 +1,205 @@
+{
+  "common": {
+    "appName": "SoufTools",
+    "tagline": "Globale Ultra-Performance KI-Plattform",
+    "subtitle": "Erleben Sie Spitzen-KI-Modelle mit extrem hoher Geschwindigkeit, Live-Websuche und mehrsprachiger Intelligenz",
+    "startChat": "Jetzt Chat starten",
+    "exploreAdmin": "Admin-Dashboard",
+    "newChat": "Neuer Chat",
+    "history": "Verlauf",
+    "settings": "Einstellungen",
+    "adminPanel": "Admin-Panel",
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "selectModel": "Modell wählen",
+    "webSearch": "Websuche",
+    "searchPlaceholder": "Fragen Sie SoufAI alles...",
+    "send": "Senden",
+    "copy": "Kopieren",
+    "copied": "Kopiert!",
+    "retry": "Wiederholen",
+    "clearHistory": "Verlauf löschen",
+    "noHistory": "Kein Verlauf vorhanden",
+    "activeStatus": "Aktiv & Bereit",
+    "busyStatus": "Dienst vorübergehend beschäftigt",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "loading": "Laden...",
+    "success": "Erfolgreich abgeschlossen",
+    "error": "Ein Fehler ist aufgetreten."
+  },
+  "navigation": {
+    "home": "Startseite",
+    "chat": "KI Chat",
+    "tools": "Werkzeug-Katalog",
+    "calculator": "Token-Rechner",
+    "pricing": "Preise",
+    "about": "Über uns",
+    "privacy": "Datenschutz",
+    "terms": "AGB",
+    "admin": "Admin-Zentrum"
+  },
+  "auth": {
+    "title": "Willkommen zurück",
+    "subtitle": "Melden Sie sich an, um auf gespeicherte Sitzungen zuzugreifen",
+    "googleLogin": "Weiter mit Google",
+    "githubLogin": "Weiter mit GitHub",
+    "emailLabel": "E-Mail-Adresse",
+    "passwordLabel": "Passwort",
+    "phoneLabel": "Telefonnummer",
+    "phoneLogin": "SMS-Login",
+    "or": "ODER",
+    "submitLogin": "Anmelden",
+    "submitRegister": "Kostenloses Konto erstellen",
+    "toggleRegister": "Kein Konto? Registrieren",
+    "toggleLogin": "Bereits registriert? Anmelden"
+  },
+  "home": {
+    "heroBadge": "SoufTools v10.0 — Globale Mehrsprachige KI",
+    "heroTitle": "Die All-in-One KI-Plattform",
+    "heroDesc": "Ultra-schnelle Inferenz, Echtzeit-Websuche mit Quellenbelegen und 4K-Bildgenerierung.",
+    "ctaStart": "Arbeitsbereich öffnen",
+    "ctaExplore": "Alle Werkzeuge erkunden",
+    "featureChatTitle": "Multi-Modell KI-Chat",
+    "featureChatDesc": "Wechseln Sie nahtlos zwischen SoufAI Spark, Core, Pro, Coder und Ultra.",
+    "featureImageTitle": "KI-Bildgenerierung & Inpainting",
+    "featureImageDesc": "Erstellen Sie 4K-Kunstwerke und bearbeiten Sie Bildbereiche interaktiv.",
+    "featureSearchTitle": "Echtzeit-Websuche",
+    "featureSearchDesc": "Websuche mit verifizierten Quellenangaben.",
+    "featureCodingTitle": "KI-Agent & Sandboxed Preview",
+    "featureCodingDesc": "Code-Ausführung in sicheren Cloud-Containern."
+  },
+  "chat": {
+    "newConversation": "Neue Unterhaltung",
+    "start": "Chat starten",
+    "stop": "Generierung stoppen",
+    "placeholder": "Fragen Sie SoufAI...",
+    "attachFile": "Datei oder Bild anfügen",
+    "enableWebSearch": "Websuche aktivieren",
+    "modelSelectorTitle": "Modell-Engine wählen",
+    "memoryActive": "KI-Gedächtnis aktiv",
+    "tokensUsed": "Tokens",
+    "thinking": "Analysieren...",
+    "emptyStateTitle": "Was möchten Sie heute erstellen?",
+    "emptyStateDesc": "Wählen Sie eine Vorlage oder stellen Sie Ihre Frage in jeder Sprache."
+  },
+  "agent": {
+    "thinking": "SoufAI-Agent analysiert Anfrage...",
+    "searching": "Durchsuche Live-Webquellen...",
+    "openingSource": "Lese Quelldokument...",
+    "readingPage": "Analysiere Inhalt...",
+    "verifying": "Überprüfe Code...",
+    "completed": "Aufgabe erfolgreich abgeschlossen",
+    "nodabaTitle": "Nodaba Admin Agent",
+    "nodabaDesc": "Automatischer Schlüsselrotations- und Überwachungsagent."
+  },
+  "tools": {
+    "catalogTitle": "KI-Werkzeuge-Katalog",
+    "catalogDesc": "Spezialisierte KI-Engines für Entwickler und Forscher.",
+    "launchTool": "Werkzeug starten",
+    "exploreGuide": "Anleitung anzeigen",
+    "intentLabel": "Hauptzweck",
+    "categoryLabel": "Kategorie"
+  },
+  "search": {
+    "groundingActive": "Echtzeit-Suche aktiv",
+    "sourcesCount": "{count} Quellen verifiziert",
+    "searchingQuery": "Suche nach: {query}",
+    "noResults": "Keine Ergebnisse gefunden"
+  },
+  "sources": {
+    "title": "Verifizierte Quellen & Zitate",
+    "visitDomain": "Quelle besuchen",
+    "citation": "Zitat #{index}",
+    "domainVerified": "Verifizierte Domain"
+  },
+  "files": {
+    "uploadTitle": "Dateien hier ablegen oder klicken",
+    "maxSize": "Maximale Dateigröße: 20MB",
+    "supportedFormats": "Bilder, Code, PDF, TXT, JSON"
+  },
+  "images": {
+    "generatorTitle": "KI-Bildgenerator",
+    "editorTitle": "KI-Inpainting-Editor",
+    "promptPlaceholder": "Beschreiben Sie das Bild...",
+    "aspectRatio": "Seitenverhältnis",
+    "generate": "Bild generieren",
+    "download": "Herunterladen"
+  },
+  "coding": {
+    "workspaceTitle": "KI-Software-Entwicklungsumgebung",
+    "runCode": "Code ausführen",
+    "preview": "Interaktive Live-Vorschau",
+    "editor": "Code-Editor",
+    "console": "Konsole",
+    "terminal": "Terminal"
+  },
+  "preview": {
+    "loading": "Starte Cloud-Sandbox...",
+    "ready": "Vorschau bereit",
+    "error": "Fehler beim Kompilieren"
+  },
+  "settings": {
+    "title": "Plattform-Einstellungen",
+    "subtitle": "Passen Sie KI-Verhalten und Einstellungen an",
+    "language": "Sprache",
+    "theme": "Design",
+    "memoryToggle": "KI-Gedächtnis aktivieren",
+    "autoPlayTts": "Automatische Sprachausgabe",
+    "clearChats": "Verlauf löschen",
+    "exportData": "Daten exportieren"
+  },
+  "profile": {
+    "account": "Konto-Informationen",
+    "email": "Registrierte E-Mail",
+    "role": "Kontorolle",
+    "adminBadge": "Administrator"
+  },
+  "admin": {
+    "title": "Admin Control Center",
+    "accessDenied": "Zugriff verweigert! Nur für Administratoren.",
+    "tabs": {
+      "keys": "KI-Schlüssel",
+      "efficiency": "Effizienz",
+      "vision": "Vision KI",
+      "runtime": "Laufzeit",
+      "seo": "SEO-Manager",
+      "tools": "Werkzeuge",
+      "agent": "Nodaba Agent",
+      "stats": "Statistiken",
+      "languages": "Sprachen-Zentrum"
+    },
+    "languages": {
+      "title": "Globales Sprachen-Zentrum & i18n",
+      "desc": "Verwalten Sie 12 Hauptsprachen, Übersetzungsabdeckung und Testmodi.",
+      "overallCoverage": "Gesamtabdeckung",
+      "totalCatalogKeys": "Gesamtschlüssel",
+      "pseudoToggle": "Pseudo-Lokalisierungsmodus",
+      "runAudit": "Audit starten",
+      "missingKeysCount": "Fehlende Schlüssel"
+    }
+  },
+  "errors": {
+    "network": "Netzwerkfehler.",
+    "modelUnavailable": "Modell vorübergehend nicht verfügbar.",
+    "toolFailed": "Ausführung fehlgeschlagen. Wiederholung...",
+    "fileTooLarge": "Datei ist größer als 20MB.",
+    "unsupportedFile": "Dateiformat nicht unterstützt.",
+    "sessionExpired": "Sitzung abgelaufen. Bitte neu anmelden."
+  },
+  "billing": {
+    "freeTier": "Kostenloser Plan",
+    "proTier": "Pro-Entwickler-Plan",
+    "ultraTier": "Enterprise Ultra Plan",
+    "upgradeBtn": "Plan upgraden"
+  },
+  "notifications": {
+    "settingsSaved": "Einstellungen gespeichert",
+    "copiedToClipboard": "In die Zwischenablage kopiert",
+    "clearedSuccess": "Verlauf erfolgreich gelöscht"
+  },
+  "seo": {
+    "defaultTitle": "SoufTools — Globale KI-Plattform",
+    "defaultDescription": "KI-Plattform der nächsten Generation mit Multi-Modell-Chat, Bildgenerator, Websuche und Code-Agent."
+  }
+}

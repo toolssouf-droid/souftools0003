@@ -1,0 +1,10 @@
+{
+  "name": "v10.00128",
+  "description": "منصة ذكاء اصطناعي متكاملة فائقة السرعة تدعم 40+ مزود والتبديل التلقا",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

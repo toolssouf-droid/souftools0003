@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.firebase/
+coverage/
+*.tsbuildinfo
+.DS_Store
+*.log
+.env*
+!.env.example
+.postgres_data/
+.pglite_data/
+.wa_auth_session/
