@@ -102,11 +102,12 @@ export const ALL_ROUTABLE_CHAT_PROVIDERS = new Set<string>([
   "bedrock",
 ]);
 
-export function parseCloudflareCredentials(rawKey: string): {
+export function parseCloudflareCredentials(rawKey: string, accountIdOverride = ""): {
   accountId: string;
   apiToken: string;
 } {
   const clean = (rawKey || "").trim();
+  const override = accountIdOverride.trim();
   const envAccountId = (process.env.CLOUDFLARE_ACCOUNT_ID || "").trim();
 
   // Support "accountId:apiToken" or "accountId|apiToken"
@@ -119,7 +120,7 @@ export function parseCloudflareCredentials(rawKey: string): {
   }
 
   return {
-    accountId: envAccountId,
+    accountId: override || envAccountId,
     apiToken: clean,
   };
 }
@@ -1017,7 +1018,8 @@ export async function testProviderKeyLive(
 export async function fetchProviderModelsLive(
   providerIdRaw: string,
   apiKey: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  accountIdOverride = ""
 ): Promise<ModelCatalogFetchResult> {
   const providerId = providerIdRaw.trim().toLowerCase();
 
@@ -1205,14 +1207,17 @@ export async function fetchProviderModelsLive(
 
   // Cloudflare Workers AI live models search
   if (providerId === "cloudflare") {
-    const { accountId, apiToken } = parseCloudflareCredentials(apiKey);
-    if (!accountId) {
+    const { accountId, apiToken } = parseCloudflareCredentials(apiKey, accountIdOverride);
+    if (!/^[a-f0-9]{16,64}$/i.test(accountId)) {
       return {
         success: false,
         models: [],
-        error: "يتطلب مزود Cloudflare معرف الحساب (accountId:apiToken أو متغير CLOUDFLARE_ACCOUNT_ID).",
+        error: "يتطلب مزود Cloudflare معرف حساب صالحاً (16 إلى 64 حرفاً سداسياً عشرياً).",
         statusCode: 400,
       };
+    }
+    if (!apiToken) {
+      return { success: false, models: [], error: "يتطلب مزود Cloudflare توكن API صالحاً.", statusCode: 400 };
     }
     const res = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/models/search?task=Text%20Generation`,

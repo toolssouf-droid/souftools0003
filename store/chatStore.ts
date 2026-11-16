@@ -516,6 +516,8 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
                 if (data && data.session && Array.isArray(data.session.messages)) {
                   if (get().activeSessionId === sessionId) {
                     const formattedMsgs = data.session.messages.map((m: any) => ({
+                      ...(m.metadata && typeof m.metadata === "object" ? m.metadata : {}),
+                      ...m,
                       id: m.id,
                       role: m.role || (m.sender === "user" ? "user" : "model"),
                       content: m.content || "",

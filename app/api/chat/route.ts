@@ -113,6 +113,10 @@ export async function POST(req: NextRequest) {
         await initEfficiencyStoreFromDb();
 
         try {
+          if (req.signal.aborted) {
+            safeClose();
+            return;
+          }
           const queryText = prompt || userResponse || "";
 
           // AI Efficiency Result Cache Check (Instantaneous Zero-Token Answer)
@@ -180,7 +184,7 @@ export async function POST(req: NextRequest) {
           let retrievedMemories: any[] = [];
           let candidateNewMemory: any = null;
 
-          if (queryText) {
+          if (queryText && !req.signal.aborted) {
             try {
               const memoryResult = await buildMemoryContext({
                 userId: effectiveUserId,
@@ -246,6 +250,11 @@ export async function POST(req: NextRequest) {
           const MAX_HISTORY_MESSAGES = 16;
           const trimmedMessages = Array.isArray(messages) ? messages.slice(-MAX_HISTORY_MESSAGES) : [];
 
+          if (req.signal.aborted) {
+            safeClose();
+            return;
+          }
+
           // Execute Multi-step Real Agent Runtime Engine
           const rawUserQuery = prompt || userResponse || "";
           const agentResult = await runAgentRuntime({
@@ -265,6 +274,7 @@ export async function POST(req: NextRequest) {
             resumeTaskId,
             userResponse,
             maxStepsTier,
+            signal: req.signal,
             onToken: (delta) => {
               sendEvent("token", { delta });
             },
@@ -390,6 +400,18 @@ export async function POST(req: NextRequest) {
           });
           safeClose();
         } catch (err: any) {
+          if (req.signal.aborted) {
+            const cancelledState = buildAgentActivityState([], [], [], [], "cancelled");
+            sendEvent("complete", {
+              status: "cancelled",
+              text: "",
+              finalAnswer: "",
+              agentSteps: [],
+              activityState: cancelledState,
+            });
+            safeClose();
+            return;
+          }
           console.error("Agent execution error in route:", err);
           serverErrorManager.recordError({
             title: "تعثر تنفيذ طلب المحادثة الذكي (Chat Agent Runtime Error)",

@@ -10,6 +10,7 @@ interface AddProviderModalProps {
   onClose: () => void;
   onAddProvider: (data: {
     providerId: string;
+    accountId?: string;
     soufModelId: string;
     keys: string[];
     models: string[];
@@ -71,6 +72,7 @@ export const AddProviderModal: React.FC<AddProviderModalProps> = ({
 
     onAddProvider({
       providerId: selectedProviderId,
+      accountId: selectedProviderId === "cloudflare" ? cloudflareAccountId.trim() : undefined,
       soufModelId: selectedSoufModel,
       keys,
       models: models.length > 0 ? models : currentProviderDef?.models || [],
@@ -264,7 +266,11 @@ export const AddProviderModal: React.FC<AddProviderModalProps> = ({
                         method: "POST",
                         credentials: "include",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ providerId: selectedProviderId, apiKey: firstKey || "" }),
+                        body: JSON.stringify({
+                          providerId: selectedProviderId,
+                          apiKey: firstKey || "",
+                          accountId: selectedProviderId === "cloudflare" ? cloudflareAccountId.trim() : undefined,
+                        }),
                       });
                       const data = await res.json().catch(() => ({}));
                       if (res.ok && data.success && Array.isArray(data.models) && data.models.length > 0) {

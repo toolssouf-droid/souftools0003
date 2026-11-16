@@ -278,7 +278,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
                 sources={message.sources || []}
                 pagesRead={message.pagesRead || []}
                 queriesUsed={message.queriesUsed || []}
-                isGenerating={false}
+                isGenerating={Boolean(isGenerating && message.isStreaming)}
                 isStreaming={message.isStreaming || false}
                 locale={locale}
                 userPrompt={userPrompt}
@@ -593,6 +593,7 @@ export const MessageItem = React.memo(MessageItemComponent, (prevProps, nextProp
     prevProps.locale === nextProps.locale &&
     prevProps.isGenerating === nextProps.isGenerating &&
     prevProps.message.activityState === nextProps.message.activityState &&
+    prevProps.message.widgetData === nextProps.message.widgetData &&
     prevProps.message.sources?.length === nextProps.message.sources?.length
   );
 });

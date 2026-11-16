@@ -353,14 +353,56 @@ export async function runAgentRuntime(options: AgentRuntimeOptions): Promise<Age
     }
   };
 
+  const taskAbortSignal = globalAgentTaskStore.getAbortSignal(state.taskId);
+  const abortSignal =
+    signal && taskAbortSignal
+      ? AbortSignal.any([signal, taskAbortSignal])
+      : signal || taskAbortSignal;
+  const setCancelledState = () => {
+    if (state.status === "cancelled") return;
+    state.status = "cancelled";
+    state.completedAt = Date.now();
+    state.finalAnswer = state.finalAnswer || "تم إيقاف المهمة بناءً على طلب المستخدم.";
+    emitEvent("agent_cancelled", "🛑 تم إيقاف الوكيل", {
+      status: "cancelled",
+      summary: "تم إلغاء المهمة بواسطة المستخدم.",
+    });
+  };
+  const finishCancelled = async (): Promise<AgentRuntimeResult> => {
+    setCancelledState();
+    const persisted = await persistRuntimeCheckpoint(state.iteration, "cancelled");
+    if (!persisted) {
+      state.status = "recovery_required";
+      state.completedAt = null;
+      state.finalAnswer = "تم إيقاف المهمة، لكن تعذر حفظ حالتها النهائية؛ تتطلب استعادة.";
+      await globalAgentTaskStore.updateTaskAsync(state.taskId, state);
+    }
+    return {
+      taskId: state.taskId,
+      status: state.status,
+      text: state.finalAnswer || "",
+      agentSteps: state.agentSteps,
+      sources: accumulatedSources.map((source) => ({
+        title: source.title || "",
+        snippet: source.snippet || "",
+        url: source.url || "",
+        domain: source.domain,
+      })),
+      queriesUsed,
+      pagesRead,
+      state,
+      activities: state.activities,
+      activityState: compileAgentActivityState(state, accumulatedSources),
+      modelUsed: finalModelUsed || modelId,
+      providerUsed: finalProviderUsed || "SoufAI Agent Runtime",
+    };
+  };
+
   // 1. Start Event
   emitEvent("agent_started", "🧠 فهم الطلب وتحديد الهدف", {
     status: "completed",
     summary: `تحليل الهدف: "${effectiveRawPrompt.slice(0, 90)}${effectiveRawPrompt.length > 90 ? "..." : ""}"`,
   });
-
-  // Check cancellation before looping
-  const abortSignal = signal || globalAgentTaskStore.getAbortSignal(state.taskId);
 
   // ----------------------------------------------------
   // MANDATORY HIDDEN CLASSIFIER MODEL GATEWAY
@@ -394,20 +436,26 @@ export async function runAgentRuntime(options: AgentRuntimeOptions): Promise<Age
     let intent: "simple" | "tools" | "complex" = "simple";
 
     if (classifierConfig && classifierConfig.apiKey && classifierConfig.status !== "disabled") {
+      if (abortSignal?.aborted) return await finishCancelled();
       emitEvent("planning", "⚡ استدعاء نموذج التصنيف الداخلي", {
         status: "executing",
         summary: `جاري فرز نوع المهمة عبر [${classifierConfig.providerId}/${classifierConfig.model}]...`,
       });
 
       try {
-        const classificationResult = await classifyUserIntent(effectiveRawPrompt, classifierConfig);
+        const classificationResult = await classifyUserIntent(effectiveRawPrompt, classifierConfig, abortSignal);
         intent = classificationResult.classification;
       } catch (classErr) {
+        if (abortSignal?.aborted) {
+          return await finishCancelled();
+        }
         // Fallback heuristic if classifier API had transient network error
         const isComplex = /(?:أنشئ تطبيق|مشروع كامل|دراسة جدوى|تحليل استراتيجي)/i.test(effectiveRawPrompt);
         const isTool = /(?:ابحث|بحث|ساعة|وقت|تاريخ|احسب|حساب|ملف|مستند|كود|صورة)/i.test(effectiveRawPrompt);
         intent = isComplex ? "complex" : isTool ? "tools" : "simple";
       }
+
+      if (abortSignal?.aborted) return await finishCancelled();
 
       emitEvent("planning", `🎯 تم تصنيف الطلب: ${intent}`, {
         status: "completed",
@@ -430,6 +478,8 @@ export async function runAgentRuntime(options: AgentRuntimeOptions): Promise<Age
 أنت تجيب دائماً باللغة العربية الفصحى بأسلوب راقٍ ومفيد ومباشر ودقيق، مع تنسيق ممتاز (ماركداون، أكواد برمجية نظيفة، نقاط واضحة).
 قدم إجابة مباشرة وشاملة لسؤال المستخدم دون أي رسائل نظام أو استدعاءات JSON غير ضرورية.`,
           temperature: 0.7,
+          signal: abortSignal,
+          onToken: options.onToken,
         });
 
         let directText = directResult?.text?.trim() || "";
@@ -603,6 +653,9 @@ export async function runAgentRuntime(options: AgentRuntimeOptions): Promise<Age
           providerUsed: finalProviderUsed ? `SoufAI Direct (${finalProviderUsed})` : "SoufAI Direct Classifier",
         };
       } catch (directErr) {
+        if (abortSignal?.aborted) {
+          return await finishCancelled();
+        }
         console.warn("Direct path execution error:", directErr);
         throw directErr;
       }
@@ -805,6 +858,7 @@ ${jsonSchemaInstruction}${composedRuntimeSkills?.mergedInstructions ? `\n\n${com
         systemInstruction,
         attachments,
         responseMimeType: "application/json",
+        signal: abortSignal,
       });
 
       if (decisionResult.modelUsed) finalModelUsed = decisionResult.modelUsed;
@@ -855,6 +909,8 @@ ${jsonSchemaInstruction}${composedRuntimeSkills?.mergedInstructions ? `\n\n${com
               prompt: `أنت المساعد الذكي SoufAI لمنصة SoufTools. أجب على استفسار المستخدم باللغة العربية بأسلوب كامل ووافٍ واحترافي دون أي رسائل نظام أو تشخيصات تقنية:\n\nطلب المستخدم:\n${prompt}`,
               messages: state.conversation,
               systemInstruction: "أجب دائماً باللغة العربية بأسلوب كامل ومفيد ودقيق.",
+              signal: abortSignal,
+              onToken: options.onToken,
             });
             if (directAnswerResult?.text && !isInternalNoise(directAnswerResult.text)) {
               fallbackText = directAnswerResult.text.trim();
@@ -862,6 +918,9 @@ ${jsonSchemaInstruction}${composedRuntimeSkills?.mergedInstructions ? `\n\n${com
               if (directAnswerResult.providerUsed) finalProviderUsed = directAnswerResult.providerUsed;
             }
           } catch (directError) {
+            if (abortSignal?.aborted) {
+              throw directError;
+            }
             console.error("[runAgentRuntime] Direct response fallback failed:", directError);
           }
         }
@@ -1219,12 +1278,16 @@ ${jsonSchemaInstruction}${composedRuntimeSkills?.mergedInstructions ? `\n\n${com
             const tStart = Date.now();
 
             while (retryCount <= maxRetries) {
+              if (abortSignal?.aborted) {
+                throw abortSignal.reason || new Error("Agent task was cancelled.");
+              }
               try {
                 toolRes = await registered.execute(t.args, execContext);
                 if (toolRes.success || !toolRes.error?.retryable) {
                   break;
                 }
               } catch (err: any) {
+                if (abortSignal?.aborted || err?.name === "AbortError") throw err;
                 toolRes = {
                   success: false,
                   tool: t.tool,
@@ -1253,17 +1316,21 @@ ${jsonSchemaInstruction}${composedRuntimeSkills?.mergedInstructions ? `\n\n${com
         }
       }
     } catch (loopErr: any) {
-      console.error(`Agent loop iteration error (iteration ${state.iteration}):`, loopErr);
-      state.errors.push({
-        tool: "agent_runtime_loop",
-        error: loopErr?.message || "خطأ في دورة استدلال الوكيل",
-        iteration: state.iteration,
-      });
+      if (abortSignal?.aborted) {
+        setCancelledState();
+      } else {
+        console.error(`Agent loop iteration error (iteration ${state.iteration}):`, loopErr);
+        state.errors.push({
+          tool: "agent_runtime_loop",
+          error: loopErr?.message || "خطأ في دورة استدلال الوكيل",
+          iteration: state.iteration,
+        });
 
-      if (state.iteration >= state.maxSteps) {
-        state.status = "failed";
-        state.finalAnswer = "توقفت المهمة بعد تعذر إكمال خطوة التنفيذ.";
-        state.completedAt = Date.now();
+        if (state.iteration >= state.maxSteps) {
+          state.status = "failed";
+          state.finalAnswer = "توقفت المهمة بعد تعذر إكمال خطوة التنفيذ.";
+          state.completedAt = Date.now();
+        }
       }
     }
 
@@ -1297,17 +1364,25 @@ ${jsonSchemaInstruction}${composedRuntimeSkills?.mergedInstructions ? `\n\n${com
           prompt: `${observationsText}صغ إجابة نهائية متقنة ومنسقة وشاملة بدقة واحترافية تلبي بالكامل طلب واستفسار المستخدم التالي: "${effectiveRawPrompt}"`,
           messages: state.conversation,
           systemInstruction: "أنت المساعد الذكي SoufAI. قدم إجابة نهائية متكاملة ومفيدة باللغة العربية الفصحى مع تنسيق Markdown أنيق دون أي رموز برمجية أو رسائل نظام داخلية.",
+          signal: abortSignal,
+          onToken: options.onToken,
         });
         if (finalSyn?.text && finalSyn.text.trim().length > 0) {
           state.finalAnswer = finalSyn.text.trim();
         }
       } catch (synErr) {
-        console.warn("Final synthesis error:", synErr);
+        if (abortSignal?.aborted) {
+          setCancelledState();
+        } else {
+          console.warn("Final synthesis error:", synErr);
+        }
       }
     }
 
     const finalAnswerText = state.finalAnswer ?? "";
-    if (finalAnswerText.trim().length === 0) {
+    if (abortSignal?.aborted) {
+      setCancelledState();
+    } else if (finalAnswerText.trim().length === 0) {
       state.status = "failed";
       state.finalAnswer = "تعذر إنتاج إجابة نهائية قابلة للاستخدام.";
       state.completedAt = Date.now();
@@ -1341,7 +1416,12 @@ ${jsonSchemaInstruction}${composedRuntimeSkills?.mergedInstructions ? `\n\n${com
       userId: String(state.metadata?.userId || "default_user"),
       engineMode: "nexus_conversational",
       goal: effectiveRawPrompt,
-      status: state.status,
+      status:
+        state.status === "idle"
+          ? "failed"
+          : state.status === "observing"
+          ? "executing"
+          : state.status,
       stepsEvidence: [
         {
           stepId: "conversational_runtime_loop",

@@ -37,6 +37,7 @@ export interface ApiKeyItem {
 export interface ProviderDetail {
   id: string; // unique internal instance ID or providerId
   providerId: string;
+  accountId?: string;
   name: string;
   priority: number;
   routingMode: "round_robin" | "priority";
@@ -52,7 +53,7 @@ interface ProviderDetailCardProps {
   onUpdateProvider: (updated: ProviderDetail) => void;
   onRemoveProvider: (id: string) => void;
   onMovePriority: (id: string, direction: "up" | "down") => void;
-  onTestKey: (providerId: string, keyVal: string) => Promise<{ status: "active" | "failed" | "slow"; latencyMs: number }>;
+  onTestKey: (providerId: string, keyVal: string, accountId?: string) => Promise<{ status: "active" | "failed" | "slow"; latencyMs: number }>;
   healthData?: any;
   onUnbanModel?: (providerId: string, model: string) => void;
   onUnbanKey?: (providerId: string, key: string) => void;
@@ -137,7 +138,11 @@ export const ProviderDetailCard: React.FC<ProviderDetailCardProps> = ({
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ providerId: provider.providerId, apiKey: activeKey }),
+          body: JSON.stringify({
+            providerId: provider.providerId,
+            apiKey: activeKey,
+            accountId: provider.providerId === "cloudflare" ? provider.accountId : undefined,
+          }),
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.success && Array.isArray(data.models) && data.models.length > 0) {
@@ -187,7 +192,7 @@ export const ProviderDetailCard: React.FC<ProviderDetailCardProps> = ({
   // Ping Test Key
   const handlePingKey = async (idx: number, keyObj: ApiKeyItem) => {
     setTestingKeyIdx(idx);
-    const res = await onTestKey(provider.providerId, keyObj.key);
+    const res = await onTestKey(provider.providerId, keyObj.key, provider.accountId);
     
     const updatedKeys = [...provider.keys];
     updatedKeys[idx] = {
@@ -237,13 +242,19 @@ export const ProviderDetailCard: React.FC<ProviderDetailCardProps> = ({
     for (const rawKey of parts) {
       if (provider.keys.some((k) => k.key === rawKey)) continue;
 
-      const syntaxCheck = validateKeySyntax(provider.providerId, rawKey);
+      const formattedKey =
+        provider.providerId === "cloudflare" &&
+        provider.accountId &&
+        !/^[a-f0-9]{16,64}[:|]/i.test(rawKey)
+          ? `${provider.accountId}:${rawKey}`
+          : rawKey;
+      const syntaxCheck = validateKeySyntax(provider.providerId, formattedKey);
       const short = rawKey.length > 12 
         ? `${rawKey.slice(0, 4)}••••[${rawKey.slice(-4)}]` 
         : rawKey;
 
       newKeyObjects.push({
-        key: rawKey,
+        key: formattedKey,
         shortName: short,
         reqCount: 0,
         lastUsed: "حديثاً",
@@ -366,6 +377,27 @@ export const ProviderDetailCard: React.FC<ProviderDetailCardProps> = ({
           </button>
         </div>
       </div>
+
+      {provider.providerId === "cloudflare" && (
+        <div className="space-y-1.5">
+          <label
+            htmlFor={`cloudflare-account-${provider.id}`}
+            className="block text-xs font-bold text-[#e8f5f5]"
+          >
+            Cloudflare Account ID
+          </label>
+          <input
+            id={`cloudflare-account-${provider.id}`}
+            value={provider.accountId || ""}
+            onChange={(e) => onUpdateProvider({ ...provider, accountId: e.target.value.trim() })}
+            placeholder="32-character Account ID"
+            autoComplete="off"
+            spellCheck={false}
+            dir="ltr"
+            className="w-full bg-[#0a0f0f] text-xs font-mono text-[#00d4aa] placeholder-[#4a7070] p-2.5 rounded-lg border border-[#1e2e2e] focus:border-[#00d4aa] outline-none"
+          />
+        </div>
+      )}
 
       {/* Custom Model System Prompt */}
       <div className="space-y-1.5 bg-[#111a1a] p-3 rounded-xl border border-[#1e2e2e]">

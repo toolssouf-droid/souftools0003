@@ -34,6 +34,19 @@ export function isChatProviderSupported(providerId: string): boolean {
   return ROUTABLE_CHAT_PROVIDERS.has((providerId || "").trim().toLowerCase());
 }
 
+function attachCloudflareAccountId(providerId: string, key: string, accountId?: string): string {
+  const cleanAccountId = accountId?.trim();
+  if (
+    providerId !== "cloudflare" ||
+    !cleanAccountId ||
+    !/^[a-f0-9]{16,64}$/i.test(cleanAccountId) ||
+    /^[a-f0-9]{16,64}[:|]/i.test(key)
+  ) {
+    return key;
+  }
+  return `${cleanAccountId}:${key}`;
+}
+
 // Re-export endpoint lookup for any external diagnostics
 export { getChatEndpointForProvider };
 
@@ -113,6 +126,7 @@ function getAttachmentTextContext(attachments: any[]): string {
 
 export interface ProviderAssignment {
   providerId: string;
+  accountId?: string;
   model: string;
   models?: string[];
   activeModels?: string[];
@@ -198,6 +212,7 @@ export async function executeRoutedPrompt(options: RouterExecuteOptions): Promis
             const providers = config.modelProviders[mId] || [];
             finalAssignments![mId] = providers.map((p: any) => ({
               providerId: p.providerId,
+              accountId: typeof p.accountId === "string" ? p.accountId.trim() : undefined,
               model: p.defaultAgentModel || p.models?.[0] || "",
               models: p.models || [],
               activeModels: p.activeModels !== undefined ? p.activeModels : (p.models || []),
@@ -238,18 +253,19 @@ export async function executeRoutedPrompt(options: RouterExecuteOptions): Promis
   }
 
   // 1. Get providers list explicitly assigned by Admin for this model tier
-  let providersToTry: { providerId: string; model: string; models?: string[]; activeModels?: string[]; systemPrompt?: string; priority: number; keys?: string[] }[] = [];
+  let providersToTry: { providerId: string; accountId?: string; model: string; models?: string[]; activeModels?: string[]; systemPrompt?: string; priority: number; keys?: string[] }[] = [];
   
   if (finalAssignments && Object.keys(finalAssignments).length > 0) {
     if (finalAssignments[modelId] && finalAssignments[modelId].length > 0) {
       providersToTry = finalAssignments[modelId].map(p => ({
         providerId: p.providerId,
+        accountId: p.accountId,
         model: p.model,
         models: p.models,
         activeModels: p.activeModels,
         systemPrompt: p.systemPrompt,
         priority: p.priority || 1,
-        keys: (p as any).keys,
+        keys: (p as any).keys || [],
       })).sort((a, b) => a.priority - b.priority);
     } else {
       providersToTry = [];
@@ -378,20 +394,20 @@ export async function executeRoutedPrompt(options: RouterExecuteOptions): Promis
     if (Array.isArray(prov.keys) && prov.keys.length > 0) {
       for (const k of prov.keys) {
         const dec = decryptKey(k);
-        if (dec) rawKeysList.push(dec);
+        if (dec) rawKeysList.push(attachCloudflareAccountId(prov.providerId, dec, prov.accountId));
       }
     }
     if (finalKeys && finalKeys[prov.providerId] && finalKeys[prov.providerId].length > 0) {
       for (const k of finalKeys[prov.providerId]) {
         const dec = decryptKey(k);
-        if (dec) rawKeysList.push(dec);
+        if (dec) rawKeysList.push(attachCloudflareAccountId(prov.providerId, dec, prov.accountId));
       }
     }
 
     const envKeyForProv =
       envKeysMap[prov.providerId] ?? process.env[`${prov.providerId.toUpperCase()}_API_KEY`];
     if (envKeyForProv && envKeyForProv.trim() !== "") {
-      rawKeysList.push(envKeyForProv);
+      rawKeysList.push(attachCloudflareAccountId(prov.providerId, envKeyForProv, prov.accountId));
     }
     if (
       prov.providerId === "bedrock" &&

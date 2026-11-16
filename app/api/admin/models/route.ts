@@ -57,7 +57,8 @@ function filterChatSupportedModels(models: string[], providerId: string): string
 async function fetchProviderModels(
   req: NextRequest,
   providerId: string,
-  rawApiKey: string
+  rawApiKey: string,
+  rawAccountId = ""
 ) {
   const authResult = await requireAdmin(req);
   if ("errorResponse" in authResult) return authResult.errorResponse;
@@ -74,30 +75,38 @@ async function fetchProviderModels(
   if (rawApiKey) {
     effectiveKey = decryptKey(rawApiKey) || rawApiKey;
   }
+  let effectiveAccountId = rawAccountId.trim();
 
-  if (!effectiveKey) {
+  if (!effectiveKey || (providerId === "cloudflare" && !effectiveAccountId)) {
     try {
       const config = await loadServerAdminConfig();
-      if (config?.keys?.[providerId]?.[0]) {
+      if (!effectiveKey && config?.keys?.[providerId]?.[0]) {
         const stored = config.keys[providerId][0];
         effectiveKey = decryptKey(stored) || stored;
       }
-      if (!effectiveKey && config?.modelProviders) {
+      if (config?.modelProviders) {
         for (const tier of Object.keys(config.modelProviders)) {
           const provs = config.modelProviders[tier] || [];
           const match = provs.find((p: any) => p.providerId === providerId);
-          if (match?.keys?.[0]) {
+          if (providerId === "cloudflare" && !effectiveAccountId && typeof match?.accountId === "string") {
+            effectiveAccountId = match.accountId.trim();
+          }
+          if (!effectiveKey && match?.keys?.[0]) {
             const k = typeof match.keys[0] === "string" ? match.keys[0] : match.keys[0]?.key;
             if (k) {
               effectiveKey = decryptKey(k) || k;
-              break;
             }
           }
+          if (effectiveKey && (providerId !== "cloudflare" || effectiveAccountId)) break;
         }
       }
     } catch (e) {
       console.warn("Failed to load server admin config for live models lookup:", e);
     }
+  }
+
+  if (providerId === "cloudflare" && !effectiveAccountId) {
+    effectiveAccountId = (process.env.CLOUDFLARE_ACCOUNT_ID || "").trim();
   }
 
   // 2. Check environment variable fallbacks if not stored
@@ -402,8 +411,12 @@ async function fetchProviderModels(
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 12000);
-      const res = await fetchProviderModelsLive(providerId, effectiveKey, controller.signal);
-      clearTimeout(timeoutId);
+      let res;
+      try {
+        res = await fetchProviderModelsLive(providerId, effectiveKey, controller.signal, effectiveAccountId);
+      } finally {
+        clearTimeout(timeoutId);
+      }
       if (res.success && res.models.length > 0) {
         const shouldFilterChat =
           providerId !== "elevenlabs" && providerId !== "assemblyai" && providerId !== "voyage";
@@ -576,7 +589,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { providerId?: unknown; apiKey?: unknown };
+  let body: { providerId?: unknown; apiKey?: unknown; accountId?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -589,5 +602,6 @@ export async function POST(req: NextRequest) {
   const providerId =
     typeof body?.providerId === "string" ? body.providerId.trim().toLowerCase() : "";
   const apiKey = typeof body?.apiKey === "string" ? body.apiKey.trim() : "";
-  return fetchProviderModels(req, providerId, apiKey);
+  const accountId = typeof body?.accountId === "string" ? body.accountId.trim() : "";
+  return fetchProviderModels(req, providerId, apiKey, accountId);
 }

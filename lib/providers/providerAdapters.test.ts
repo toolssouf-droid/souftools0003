@@ -160,6 +160,10 @@ describe("Credential Parsers & AWS Signature Version 4", () => {
     const pipe = parseCloudflareCredentials("fedcba9876543210fedcba9876543210|another_token");
     assert.equal(pipe.accountId, "fedcba9876543210fedcba9876543210");
     assert.equal(pipe.apiToken, "another_token");
+
+    const separateAccountId = parseCloudflareCredentials("token-only", "abcdef0123456789abcdef0123456789");
+    assert.equal(separateAccountId.accountId, "abcdef0123456789abcdef0123456789");
+    assert.equal(separateAccountId.apiToken, "token-only");
   });
 
   it("parses Amazon Bedrock IAM keys and ABSK bearer tokens", () => {
@@ -666,7 +670,12 @@ describe("Audio, Embeddings, & Live Model Fetching", () => {
         assert.equal(br.success, true);
         assert.deepEqual(br.models, ["amazon.nova-pro-v1:0"]);
 
-        const cf = await fetchProviderModelsLive("cloudflare", "0123456789abcdef0123456789abcdef:tok");
+        const cf = await fetchProviderModelsLive(
+          "cloudflare",
+          "tok",
+          undefined,
+          "0123456789abcdef0123456789abcdef"
+        );
         assert.equal(cf.success, true);
         assert.deepEqual(cf.models, ["@cf/meta/llama-3.3-70b-instruct-fp8-fast"]);
 

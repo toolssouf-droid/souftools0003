@@ -507,12 +507,53 @@ export interface ConversationMessageDTO {
   createdAt: number;
 }
 
+const persistedMessageMetadataFields = [
+  "widgetData",
+  "activityState",
+  "reasoningSteps",
+  "reflectionSteps",
+  "hypotheses",
+  "confidenceScore",
+  "reasoningMode",
+  "suggestions",
+  "selectedSuggestions",
+  "webSearchUsed",
+  "queriesUsed",
+  "pagesRead",
+  "usedMemories",
+  "candidateNewMemory",
+  "providerUsed",
+  "keyUsedMasked",
+] as const;
+
+function collectMessageMetadata(message: any): Record<string, any> {
+  const metadata: Record<string, any> =
+    message.metadata && typeof message.metadata === "object" ? { ...message.metadata } : {};
+
+  for (const field of persistedMessageMetadataFields) {
+    if (message[field] !== undefined) metadata[field] = message[field];
+  }
+
+  return metadata;
+}
+
+function getDisplayMessageMetadata(metadata: Record<string, any>): Record<string, any> {
+  const displayMetadata: Record<string, any> = {};
+
+  for (const field of persistedMessageMetadataFields) {
+    if (metadata[field] !== undefined) displayMetadata[field] = metadata[field];
+  }
+
+  return displayMetadata;
+}
+
 function mapMessageRow(m: any, defaultModelId: string): ConversationMessageDTO {
   const role = m.role || (m.sender === "user" ? "user" : "model");
   const sender = m.sender || (role === "user" ? "user" : "assistant");
   const ts = toTimestampMs(m.createdAt);
   const metadata = m.metadata && typeof m.metadata === "object" ? m.metadata : {};
   return {
+    ...getDisplayMessageMetadata(metadata),
     id: m.id,
     role,
     sender,
@@ -673,7 +714,7 @@ export const ConversationRepository = {
               const ts = new Date(m.timestamp || m.createdAt || Date.now());
               const msgId = m.id || `${conv.id}_msg_${idx}_${Date.now()}`;
               const metadata = {
-                ...(m.metadata && typeof m.metadata === "object" ? m.metadata : {}),
+                ...collectMessageMetadata(m),
                 ...(Array.isArray(m.attachments) && m.attachments.length > 0 ? { attachments: m.attachments } : {}),
                 ...(Array.isArray(m.agentSteps) && m.agentSteps.length > 0 ? { agentSteps: m.agentSteps } : {}),
                 ...(m.modelUsed ? { modelUsed: m.modelUsed } : {}),

@@ -71,7 +71,8 @@ function cleanClassification(text: string): ClassificationType {
  */
 export async function classifyUserIntent(
   userPrompt: string,
-  config: ClassifierModelConfig
+  config: ClassifierModelConfig,
+  signal?: AbortSignal
 ): Promise<ClassifierResult> {
   const startTime = Date.now();
 
@@ -108,6 +109,7 @@ export async function classifyUserIntent(
         config: {
           maxOutputTokens: 10,
           temperature: 0.0,
+          abortSignal: signal,
         },
       });
       rawOutput = response?.text || "";
@@ -121,6 +123,7 @@ export async function classifyUserIntent(
         userPrompt: `رسالة المستخدم:\n"""${userPrompt}"""\n\nالتصنيف:`,
         temperature: 0.0,
         maxTokens: 12,
+        signal,
       });
 
       if (!restRes.ok) {

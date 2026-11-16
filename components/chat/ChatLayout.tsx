@@ -63,6 +63,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
   const isRtl = isRtlLocale(locale);
   const typingTimerRef = React.useRef<any>(null);
+  const typingResolveRef = React.useRef<(() => void) | null>(null);
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
   React.useEffect(() => {
@@ -163,6 +164,30 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
   }, [setUserEmail, setUserId, setIsAdmin, locale, router]);
 
   // Stop Generation Handler
+  const finalizeActivityState = (
+    messageId: string,
+    status: "cancelled" | "failed",
+    errorMessage?: string
+  ) => {
+    const message = useChatStore.getState().messages.find((item) => item.id === messageId);
+    if (!message?.activityState) return undefined;
+    return {
+      ...message.activityState,
+      status,
+      currentActiveStepTitle: undefined,
+      activities: message.activityState.activities.map((activity) =>
+        activity.status === "running" ? { ...activity, status } : activity
+      ),
+      planSteps: message.activityState.planSteps.map((step) =>
+        step.status === "running" ? { ...step, status } : step
+      ),
+      toolsUsed: message.activityState.toolsUsed.map((tool) =>
+        tool.status === "running" ? { ...tool, status } : tool
+      ),
+      ...(errorMessage ? { error: { message: errorMessage, canRetry: true } } : {}),
+    };
+  };
+
   const handleStopGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -172,14 +197,22 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
       clearInterval(typingTimerRef.current);
       typingTimerRef.current = null;
     }
+    typingResolveRef.current?.();
+    typingResolveRef.current = null;
     setIsGenerating(false);
     setLiveSearch(false);
 
     // Set any currently streaming message to stopped (isStreaming = false)
     const stateMessages = useChatStore.getState().messages;
-    const streamingMsg = stateMessages.find((m) => m.isStreaming);
+    const streamingMsg = [...stateMessages].reverse().find((m) => m.isStreaming);
     if (streamingMsg) {
-      updateMessage(streamingMsg.id, { isStreaming: false });
+      updateMessage(streamingMsg.id, {
+        content:
+          streamingMsg.content ||
+          (isRtl ? "تم إيقاف الرد قبل وصوله." : "Generation stopped before a response arrived."),
+        isStreaming: false,
+        activityState: finalizeActivityState(streamingMsg.id, "cancelled"),
+      });
     }
   };
 
@@ -209,6 +242,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
     }
   ) => {
     return new Promise<void>((resolve) => {
+      typingResolveRef.current = resolve;
       let currentIndex = 0;
       const totalLen = fullText.length;
       // Smooth adaptive chunking targeting ~30fps updates without UI thread blocking
@@ -223,6 +257,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
             clearInterval(typingTimerRef.current);
             typingTimerRef.current = null;
           }
+          typingResolveRef.current = null;
           updateMessage(messageId, {
             content: fullText,
             isStreaming: false,
@@ -270,8 +305,9 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
       modelUsed: currentModel,
     });
 
-    // Abort controller setup
-    abortControllerRef.current = new AbortController();
+    // Keep request ownership local so an older request cannot clear a newer one.
+    const requestController = new AbortController();
+    abortControllerRef.current = requestController;
 
     let gmailToken: string | null = null;
     try {
@@ -311,7 +347,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: requestHeaders,
-        signal: abortControllerRef.current.signal,
+        signal: requestController.signal,
         body: JSON.stringify({
           modelId: currentModel,
           prompt: userPrompt,
@@ -335,107 +371,143 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
         let buffer = "";
         let accumulatedLiveTokens = "";
         let hasReceivedLiveTokens = false;
+        let hasReceivedComplete = false;
+        let hasReceivedError = false;
+
+        const processEvent = async (part: string) => {
+          const dataStr = part
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n")
+            .split("\n")
+            .filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5).replace(/^ /, ""))
+            .join("\n")
+            .trim();
+          if (!dataStr) return;
+
+          try {
+            const payload = JSON.parse(dataStr);
+
+            if (payload.type === "token") {
+              const delta = payload.data?.delta || "";
+              if (delta) {
+                hasReceivedLiveTokens = true;
+                accumulatedLiveTokens += delta;
+                updateMessage(assistantMsgId, {
+                  content: accumulatedLiveTokens,
+                  isStreaming: true,
+                });
+              }
+            } else if (payload.type === "activity") {
+              const stateData = payload.data?.state;
+              updateMessage(assistantMsgId, {
+                activityState: stateData,
+              });
+              if (stateData?.contextualSuggestions) {
+                useChatStore.getState().setContextualSuggestions(stateData.contextualSuggestions);
+              }
+            } else if (payload.type === "complete") {
+              hasReceivedComplete = true;
+              const data = payload.data;
+              const finalSources = data.sources || [];
+
+              if (data.contextualSuggestions) {
+                useChatStore.getState().setContextualSuggestions(data.contextualSuggestions);
+              }
+
+              setLiveSearch(false, finalSources, data.webSearchUsed ? userPrompt : "");
+
+              const completedText = data.text?.trim() || data.finalAnswer?.trim() || "";
+              const streamedText = accumulatedLiveTokens.trim();
+              const finalStreamText =
+                completedText && completedText.length >= streamedText.length
+                  ? completedText
+                  : streamedText ||
+                    completedText ||
+                    (data.status === "cancelled"
+                      ? (isRtl ? "تم إيقاف المهمة." : "The task was stopped.")
+                      : undefined) ||
+                    (isRtl ? "تمت معالجة استفسارك بنجاح." : "Your request was processed successfully.");
+
+              const metadataPayload = {
+                modelUsed: data.modelUsed,
+                providerUsed: data.providerUsed,
+                keyUsedMasked: data.keyUsedMasked,
+                webSearchUsed: data.webSearchUsed || false,
+                sources: finalSources,
+                agentSteps: data.agentSteps || [],
+                reasoningSteps: data.reasoningSteps || data.agentSteps || [],
+                reflectionSteps: data.reflectionSteps || [],
+                hypotheses: data.hypotheses || [],
+                confidenceScore: data.confidenceScore,
+                reasoningMode: data.reasoningMode || (data.agentSteps && data.agentSteps.length > 1 ? "deep_thinking" : undefined),
+                activityState: data.activityState || payload.data.state || undefined,
+                suggestions: data.suggestions || [],
+                queriesUsed: data.queriesUsed || [],
+                pagesRead: data.pagesRead || [],
+                usedMemories: data.usedMemories || [],
+                candidateNewMemory: data.candidateNewMemory || undefined,
+                widgetData: data.widgetData || undefined,
+              };
+
+              if (hasReceivedLiveTokens && streamedText.length > 0) {
+                updateMessage(assistantMsgId, {
+                  content: finalStreamText,
+                  isStreaming: false,
+                  ...metadataPayload,
+                });
+                cloudSyncService.triggerAutoSync(3000);
+              } else {
+                await animateTextStream(assistantMsgId, finalStreamText, metadataPayload);
+              }
+            } else if (payload.type === "error") {
+              hasReceivedError = true;
+              updateMessage(assistantMsgId, {
+                content: payload.data?.message || "حدث خطأ أثناء معالجة الطلب.",
+                isStreaming: false,
+                activityState: finalizeActivityState(
+                  assistantMsgId,
+                  "failed",
+                  payload.data?.message || "حدث خطأ أثناء معالجة الطلب."
+                ),
+              });
+              setLiveSearch(false);
+            }
+          } catch (e) {
+            console.error("Error parsing SSE JSON:", e);
+          }
+        };
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (value) buffer += decoder.decode(value, { stream: true });
 
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n\n");
-
-          // Keep the last part in buffer if it doesn't end with \n\n
+          const normalizedBuffer = buffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+          const parts = normalizedBuffer.split("\n\n");
           buffer = parts.pop() || "";
 
           for (const part of parts) {
-            const cleanPart = part.trim();
-            if (cleanPart.startsWith("data: ")) {
-              const dataStr = cleanPart.slice(6).trim();
-              if (!dataStr) continue;
-              try {
-                const payload = JSON.parse(dataStr);
-
-                if (payload.type === "token") {
-                  const delta = payload.data?.delta || "";
-                  if (delta) {
-                    hasReceivedLiveTokens = true;
-                    accumulatedLiveTokens += delta;
-                    updateMessage(assistantMsgId, {
-                      content: accumulatedLiveTokens,
-                      isStreaming: true,
-                    });
-                  }
-                } else if (payload.type === "activity") {
-                  const stateData = payload.data.state;
-                  updateMessage(assistantMsgId, {
-                    activityState: stateData,
-                  });
-                  if (stateData?.contextualSuggestions) {
-                    useChatStore.getState().setContextualSuggestions(stateData.contextualSuggestions);
-                  }
-                } else if (payload.type === "complete") {
-                  const data = payload.data;
-                  const finalSources = data.sources || [];
-
-                  if (data.contextualSuggestions) {
-                    useChatStore.getState().setContextualSuggestions(data.contextualSuggestions);
-                  }
-
-                  if (data.webSearchUsed) {
-                    setLiveSearch(false, finalSources, userPrompt);
-                  } else {
-                    setLiveSearch(false);
-                  }
-
-                  const finalStreamText =
-                    data.text?.trim() ||
-                    accumulatedLiveTokens.trim() ||
-                    data.finalAnswer?.trim() ||
-                    (isRtl ? "تمت معالجة استفسارك بنجاح." : "Your request was processed successfully.");
-
-                  const metadataPayload = {
-                    modelUsed: data.modelUsed,
-                    providerUsed: data.providerUsed,
-                    keyUsedMasked: data.keyUsedMasked,
-                    webSearchUsed: data.webSearchUsed || false,
-                    sources: finalSources,
-                    agentSteps: data.agentSteps || [],
-                    reasoningSteps: data.reasoningSteps || data.agentSteps || [],
-                    reflectionSteps: data.reflectionSteps || [],
-                    hypotheses: data.hypotheses || [],
-                    confidenceScore: data.confidenceScore,
-                    reasoningMode: data.reasoningMode || (data.agentSteps && data.agentSteps.length > 1 ? "deep_thinking" : undefined),
-                    activityState: data.activityState || payload.data.state || undefined,
-                    suggestions: data.suggestions || [],
-                    queriesUsed: data.queriesUsed || [],
-                    pagesRead: data.pagesRead || [],
-                    usedMemories: data.usedMemories || [],
-                    candidateNewMemory: data.candidateNewMemory || undefined,
-                    widgetData: data.widgetData || undefined,
-                  };
-
-                  if (hasReceivedLiveTokens && accumulatedLiveTokens.trim().length > 0) {
-                    updateMessage(assistantMsgId, {
-                      content: finalStreamText,
-                      isStreaming: false,
-                      ...metadataPayload,
-                    });
-                    cloudSyncService.triggerAutoSync(3000);
-                  } else {
-                    // Smooth streaming animation fallback
-                    await animateTextStream(assistantMsgId, finalStreamText, metadataPayload);
-                  }
-                } else if (payload.type === "error") {
-                  updateMessage(assistantMsgId, {
-                    content: payload.data.message || "حدث خطأ أثناء معالجة الطلب.",
-                    isStreaming: false,
-                  });
-                  setLiveSearch(false);
-                }
-              } catch (e) {
-                console.error("Error parsing SSE JSON:", e);
-              }
-            }
+            await processEvent(part);
           }
+
+          if (done) {
+            buffer += decoder.decode();
+            if (buffer.trim()) await processEvent(buffer);
+            break;
+          }
+        }
+
+        if (!hasReceivedComplete && !hasReceivedError) {
+          setLiveSearch(false);
+          const partialText = accumulatedLiveTokens.trim();
+          const interruptionNotice = isRtl
+            ? "انقطع الاتصال قبل اكتمال الرد. أعد إرسال الطلب للحصول على إجابة كاملة."
+            : "The connection ended before the response completed. Resend the request for a complete answer.";
+          updateMessage(assistantMsgId, {
+            content: partialText ? `${partialText}\n\n${interruptionNotice}` : interruptionNotice,
+            isStreaming: false,
+            activityState: finalizeActivityState(assistantMsgId, "failed", interruptionNotice),
+          });
         }
       } else {
         const errData = await response.json().catch(() => ({}));
@@ -449,6 +521,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
         updateMessage(assistantMsgId, {
           content: errMsg,
           isStreaming: false,
+          activityState: finalizeActivityState(assistantMsgId, "failed", errMsg),
         });
         setLiveSearch(false);
 
@@ -470,19 +543,22 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
         updateMessage(assistantMsgId, {
           content: errMsg,
           isStreaming: false,
+          activityState: finalizeActivityState(assistantMsgId, "failed", errMsg),
         });
         setLiveSearch(false);
       }
     } finally {
-      setIsGenerating(false);
-      abortControllerRef.current = null;
-      // Auto-focus the input box after generation completes
-      setTimeout(() => {
-        const inputEl = document.querySelector("textarea");
-        if (inputEl) {
-          inputEl.focus();
-        }
-      }, 50);
+      if (abortControllerRef.current === requestController) {
+        setIsGenerating(false);
+        abortControllerRef.current = null;
+        // Auto-focus the input box after generation completes
+        setTimeout(() => {
+          const inputEl = document.querySelector("textarea");
+          if (inputEl) {
+            inputEl.focus();
+          }
+        }, 50);
+      }
     }
   };
 

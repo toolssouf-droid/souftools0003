@@ -515,13 +515,13 @@ export const KeysManager: React.FC = () => {
   };
 
   // Test single key API Ping
-  const handleTestKey = async (providerId: string, keyVal: string) => {
+  const handleTestKey = async (providerId: string, keyVal: string, accountId?: string) => {
     const startTime = Date.now();
     try {
       const res = await fetch("/api/admin/test-key", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ providerId, key: keyVal }),
+        body: JSON.stringify({ providerId, key: keyVal, accountId }),
       });
       const latencyMs = Date.now() - startTime;
       if (res.ok) {
@@ -537,6 +537,7 @@ export const KeysManager: React.FC = () => {
   // Handle adding provider from Modal
   const handleAddProviderFromModal = (data: {
     providerId: string;
+    accountId?: string;
     soufModelId: string;
     keys: string[];
     models: string[];
@@ -559,6 +560,7 @@ export const KeysManager: React.FC = () => {
     const newProvider: ProviderDetail = {
       id: `${data.soufModelId}-${data.providerId}-${Date.now()}`,
       providerId: data.providerId,
+      accountId: data.accountId,
       name: pName,
       priority: data.priority,
       routingMode: data.routingMode,
@@ -675,6 +677,8 @@ export const KeysManager: React.FC = () => {
       const updatedProvidersMap: Record<string, ProviderDetail[]> = JSON.parse(JSON.stringify(modelProviders));
       const tierKeys = Object.keys(updatedProvidersMap);
       const providerTargets = new Map<string, {
+        providerId: string;
+        accountId?: string;
         instances: ProviderDetail[];
         keys: string[];
       }>();
@@ -684,10 +688,18 @@ export const KeysManager: React.FC = () => {
           const providerId = provider.providerId.trim().toLowerCase();
           if (!providerId) continue;
 
-          let target = providerTargets.get(providerId);
+          const embeddedAccountId =
+            providerId === "cloudflare"
+              ? provider.keys
+                  .map((key) => key.key.match(/^([a-f0-9]{16,64})[:|]/i)?.[1])
+                  .find(Boolean)
+              : undefined;
+          const accountId = provider.accountId || embeddedAccountId;
+          const targetId = providerId === "cloudflare" ? `${providerId}:${accountId || ""}` : providerId;
+          let target = providerTargets.get(targetId);
           if (!target) {
-            target = { instances: [], keys: [] };
-            providerTargets.set(providerId, target);
+            target = { providerId, accountId, instances: [], keys: [] };
+            providerTargets.set(targetId, target);
           }
           target.instances.push(provider);
 
@@ -704,7 +716,8 @@ export const KeysManager: React.FC = () => {
       }
 
       const failures: string[] = [];
-      for (const [providerId, target] of providerTargets) {
+      for (const target of providerTargets.values()) {
+        const providerId = target.providerId;
         let fetchedModels: string[] | null = null;
         let lastError = "لم يُرجع المزود قائمة نماذج صالحة.";
 
@@ -714,7 +727,11 @@ export const KeysManager: React.FC = () => {
               method: "POST",
               credentials: "include",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ providerId, apiKey }),
+              body: JSON.stringify({
+                providerId,
+                apiKey,
+                accountId: target.accountId,
+              }),
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok && data.success && Array.isArray(data.models) && data.models.length > 0) {
