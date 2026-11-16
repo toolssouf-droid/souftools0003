@@ -92,12 +92,16 @@ export interface ChatMessage {
 
 export type SoufAIModelId = "spark" | "core" | "pro" | "ultra";
 
+function isSoufAIModelId(modelId: string): modelId is SoufAIModelId {
+  return modelId === "spark" || modelId === "core" || modelId === "pro" || modelId === "ultra";
+}
+
 export interface ChatSession {
   id: string;
   title: string;
   createdAt: number;
   updatedAt: number;
-  modelId: SoufAIModelId;
+  modelId: string;
   messages: ChatMessage[];
   source?: "web" | "telegram";
   channel?: "web" | "telegram";
@@ -173,6 +177,22 @@ interface ChatStoreState {
   setIsGenerating: (isGenerating: boolean) => void;
 }
 
+function mergeSessionsWithLocalChanges(
+  serverSessions: ChatSession[],
+  localSessions: ChatSession[]
+): ChatSession[] {
+  const merged = new Map(serverSessions.map((session) => [session.id, session]));
+
+  for (const localSession of localSessions) {
+    const serverSession = merged.get(localSession.id);
+    if (!serverSession || localSession.updatedAt >= serverSession.updatedAt) {
+      merged.set(localSession.id, localSession);
+    }
+  }
+
+  return Array.from(merged.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
 export const useChatStore = create<ChatStoreState>()((set, get) => ({
       currentModel: "core",
       selectedModel: "gemini-3.7-flash",
@@ -226,7 +246,34 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
       setIsDashboardOpen: (open) => set({ isDashboardOpen: open }),
       setDashboardTab: (tab) => set({ dashboardTab: tab }),
 
-      setCurrentModel: (model) => set({ currentModel: model as SoufAIModelId, selectedModel: model }),
+      setCurrentModel: (model) => {
+        let sessionToSave: ChatSession | undefined;
+        let userId: string | null = null;
+
+        set((state) => {
+          const sessions = state.sessions.map((session) => {
+            if (session.id !== state.activeSessionId) return session;
+
+            sessionToSave = {
+              ...session,
+              modelId: model as SoufAIModelId,
+              updatedAt: Date.now(),
+            };
+            return sessionToSave;
+          });
+          userId = state.userId;
+
+          return {
+            currentModel: model as SoufAIModelId,
+            selectedModel: model,
+            sessions,
+          };
+        });
+
+        if (userId && sessionToSave) {
+          void saveSessionToCloud(userId, sessionToSave);
+        }
+      },
       setSelectedModel: (model) => set({ selectedModel: model }),
       clearAllSessions: () => {
         const uid = get().userId;
@@ -276,6 +323,11 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
       },
       setUserName: (userName) => set({ userName }),
       setUserId: (userId) => {
+        const previousUserId = get().userId;
+        if (previousUserId && userId && previousUserId !== userId) {
+          set({ sessions: [], activeSessionId: null, messages: [] });
+        }
+
         set({ userId });
         if (!userId) {
           set({ sessions: [], activeSessionId: null, messages: [] });
@@ -283,20 +335,24 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
         }
         if (userId) {
           getUserSessionsFromCloud(userId).then((rawSessions) => {
-            const serverSessions = rawSessions as any[];
-            if (Array.isArray(serverSessions) && serverSessions.length > 0) {
-              set((state) => {
-                const active = state.activeSessionId && serverSessions.find((s) => s.id === state.activeSessionId)
+            if (!Array.isArray(rawSessions)) return;
+
+            set((state) => {
+              if (state.userId !== userId) return state;
+
+              const sessions = mergeSessionsWithLocalChanges(rawSessions, state.sessions);
+              const activeSessionId =
+                state.activeSessionId && sessions.some((session) => session.id === state.activeSessionId)
                   ? state.activeSessionId
-                  : serverSessions[0].id;
-                const activeSession = serverSessions.find((s) => s.id === active) || serverSessions[0];
-                return {
-                  sessions: serverSessions as ChatSession[],
-                  activeSessionId: active,
-                  messages: activeSession ? (activeSession.messages || []) : state.messages,
-                };
-              });
-            }
+                  : sessions[0]?.id ?? null;
+              const activeSession = sessions.find((session) => session.id === activeSessionId);
+
+              return {
+                sessions,
+                activeSessionId,
+                messages: activeSession ? activeSession.messages || [] : state.messages,
+              };
+            });
           }).catch(() => null);
         }
       },
@@ -319,13 +375,18 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
           const rawSessions = await getUserSessionsFromCloud(uid);
           if (Array.isArray(rawSessions)) {
             set((state) => {
-              const active = state.activeSessionId && rawSessions.find((s) => s.id === state.activeSessionId)
-                ? state.activeSessionId
-                : (rawSessions[0]?.id ?? null);
-              const activeSession = rawSessions.find((s) => s.id === active) || rawSessions[0];
+              if (state.userId && state.userId !== uid) return state;
+
+              const sessions = mergeSessionsWithLocalChanges(rawSessions, state.sessions);
+              const activeSessionId =
+                state.activeSessionId && sessions.some((session) => session.id === state.activeSessionId)
+                  ? state.activeSessionId
+                  : sessions[0]?.id ?? null;
+              const activeSession = sessions.find((session) => session.id === activeSessionId);
+
               return {
-                sessions: rawSessions as ChatSession[],
-                activeSessionId: active,
+                sessions,
+                activeSessionId,
                 messages: activeSession ? (activeSession.messages || []) : state.messages,
               };
             });
@@ -439,10 +500,12 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
       setActiveSession: (sessionId) => {
         const session = get().sessions.find((s) => s.id === sessionId);
         if (session) {
+          const currentModel = isSoufAIModelId(session.modelId) ? session.modelId : "core";
           set({
             activeSessionId: sessionId,
             messages: session.messages || [],
-            currentModel: session.modelId || "core",
+            currentModel,
+            selectedModel: currentModel,
           });
 
           // Fetch full message history from server if messages are empty or if it's a telegram-linked session

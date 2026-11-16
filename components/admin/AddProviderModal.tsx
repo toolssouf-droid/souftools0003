@@ -27,6 +27,7 @@ export const AddProviderModal: React.FC<AddProviderModalProps> = ({
   const [selectedProviderId, setSelectedProviderId] = useState(AI_PROVIDERS[0]?.id || "gemini");
   const [selectedSoufModel, setSelectedSoufModel] = useState("core");
   const [keysInput, setKeysInput] = useState("");
+  const [cloudflareAccountId, setCloudflareAccountId] = useState("");
   const [modelsInput, setModelsInput] = useState("");
   const [systemPromptInput, setSystemPromptInput] = useState("");
   const [routingMode, setRoutingMode] = useState<"round_robin" | "priority">("priority");
@@ -38,6 +39,22 @@ export const AddProviderModal: React.FC<AddProviderModalProps> = ({
 
   const currentProviderDef = AI_PROVIDERS.find((p) => p.id === selectedProviderId);
 
+  const getProviderKeys = () => {
+    const keys = keysInput
+      .split("\n")
+      .map((key) => key.trim())
+      .filter(Boolean);
+
+    if (selectedProviderId !== "cloudflare" || !cloudflareAccountId.trim()) {
+      return keys;
+    }
+
+    const accountId = cloudflareAccountId.trim();
+    return keys.map((key) =>
+      key.includes(":") || key.includes("|") ? key : `${accountId}:${key}`
+    );
+  };
+
   // Select provider without injecting hardcoded models
   const handleSelectProvider = (pId: string) => {
     setSelectedProviderId(pId);
@@ -45,10 +62,7 @@ export const AddProviderModal: React.FC<AddProviderModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const keys = keysInput
-      .split("\n")
-      .map((k) => k.trim())
-      .filter(Boolean);
+    const keys = getProviderKeys();
 
     const models = modelsInput
       .split(",")
@@ -67,6 +81,7 @@ export const AddProviderModal: React.FC<AddProviderModalProps> = ({
 
     // Reset
     setKeysInput("");
+    setCloudflareAccountId("");
     setModelsInput("");
     setSystemPromptInput("");
     onClose();
@@ -168,15 +183,46 @@ export const AddProviderModal: React.FC<AddProviderModalProps> = ({
 
           {/* 3. API Keys (1 per line) */}
           <div>
+            {selectedProviderId === "cloudflare" && (
+              <div className="mb-3">
+                <label
+                  htmlFor="cloudflare-account-id"
+                  className="block text-xs font-bold text-[#e8f5f5] mb-2 flex items-center gap-2"
+                >
+                  <Key className="w-4 h-4 text-[#00d4aa]" />
+                  معرّف حساب Cloudflare:
+                </label>
+                <input
+                  id="cloudflare-account-id"
+                  type="text"
+                  value={cloudflareAccountId}
+                  onChange={(e) => setCloudflareAccountId(e.target.value.trim())}
+                  placeholder="Cloudflare Account ID"
+                  autoComplete="off"
+                  spellCheck={false}
+                  dir="ltr"
+                  className="w-full bg-[#111a1a] text-xs font-mono text-[#00d4aa] placeholder-[#4a7070] p-3 rounded-xl border border-[#1e2e2e] focus:border-[#00d4aa] outline-none"
+                />
+                <p className="mt-1.5 text-[11px] leading-relaxed text-[#6a8585]">
+                  سيُضاف المعرّف تلقائياً إلى كل توكن عند الحفظ وجلب النماذج. اتركه فارغاً إذا أدخلت المفتاح بصيغة ACCOUNT_ID:API_TOKEN أو ضبطته في الخادم.
+                </p>
+              </div>
+            )}
             <label className="block text-xs font-bold text-[#e8f5f5] mb-2 flex items-center gap-2">
               <Key className="w-4 h-4 text-[#00d4aa]" />
-              مفاتيح API (أدخل كل مفتاح في سطر منفصل):
+              {selectedProviderId === "cloudflare"
+                ? "توكنات API (أدخل كل توكن في سطر منفصل):"
+                : "مفاتيح API (أدخل كل مفتاح في سطر منفصل):"}
             </label>
             <textarea
               rows={3}
               value={keysInput}
               onChange={(e) => setKeysInput(e.target.value)}
-              placeholder={`gsk_1928374829374982\ngsk_9918273645192837\nsk-or-v1-9876543210`}
+              placeholder={
+                selectedProviderId === "cloudflare"
+                  ? "Cloudflare API Token\nCloudflare API Token"
+                  : "gsk_...\ngsk_...\nsk-or-v1-..."
+              }
               className="w-full bg-[#111a1a] text-xs font-mono text-[#00d4aa] placeholder-[#4a7070] p-3 rounded-xl border border-[#1e2e2e] focus:border-[#00d4aa] outline-none leading-relaxed"
             />
           </div>
@@ -207,7 +253,7 @@ export const AddProviderModal: React.FC<AddProviderModalProps> = ({
                   type="button"
                   disabled={isFetchingModels}
                   onClick={async () => {
-                    const firstKey = keysInput.split("\n")[0]?.trim();
+                    const firstKey = getProviderKeys()[0];
                     if (!firstKey && selectedProviderId !== "ollama") {
                       alert("الرجاء إدخال مفتاح الـ API أولاً لجلب النماذج الحية من حسابك مباشرة.");
                       return;
