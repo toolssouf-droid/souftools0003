@@ -662,18 +662,18 @@ export const ConversationRepository = {
       messages?: any[];
     }
   ) {
-    const database = await getReadyDb();
     const now = new Date(conv.updatedAt || Date.now());
     const createdDate = new Date(conv.createdAt || Date.now());
 
     try {
-      await UserRepository.upsertUser({
-        id: userId,
-        email: `${userId}@souftools.app`,
-        displayName: userId,
-      });
+      await executeWithRetry(async (database) => {
+        await UserRepository.upsertUser({
+          id: userId,
+          email: `${userId}@souftools.app`,
+          displayName: userId,
+        });
 
-      await database.transaction(async (tx) => {
+        await database.transaction(async (tx) => {
         const existing = await tx
           .select()
           .from(schema.conversations)
@@ -754,7 +754,8 @@ export const ConversationRepository = {
             }
           }
         }
-      });
+        });
+      }, { maxAttempts: 5, baseDelayMs: 200, label: "saveConversation" });
     } catch (err) {
       console.error("[Turso ConversationRepository.saveConversation] error:", err);
       throw err;
