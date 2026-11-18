@@ -23,6 +23,7 @@ import { useScheduleWatcher } from "@/hooks/useScheduleWatcher";
 import { CloudSyncIndicator } from "@/components/ui/CloudSyncIndicator";
 import { BehavioralNotificationHub } from "@/components/ui/BehavioralNotificationHub";
 import { cloudSyncService } from "@/lib/sync/cloudSyncService";
+import { ensureServerSession } from "@/lib/auth/serverSessionClient";
 
 interface ChatLayoutProps {
   locale: string;
@@ -90,13 +91,28 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
 
       // 2. If not found in immediate sync storage, query Better Auth session async
       if (!rawEmail) {
-        try {
-          const betterSession = await authClient.getSession().catch(() => null);
-          if (betterSession?.data?.user?.email) {
-            rawEmail = betterSession.data.user.email;
-            effectiveUid = betterSession.data.user.id || effectiveUid;
+        for (let attempt = 0; attempt < 2 && !rawEmail; attempt++) {
+          try {
+            const betterSession = await authClient.getSession().catch(() => null);
+            if (betterSession?.data?.user?.email) {
+              rawEmail = betterSession.data.user.email;
+              effectiveUid = betterSession.data.user.id || effectiveUid;
+              break;
+            }
+          } catch {}
+
+          try {
+            const serverSession = await ensureServerSession();
+            if (serverSession.authenticated && serverSession.user?.email) {
+              rawEmail = serverSession.user.email;
+              effectiveUid = serverSession.user.id || effectiveUid;
+            }
+          } catch {}
+
+          if (!rawEmail && attempt === 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, 500));
           }
-        } catch {}
+        }
       }
 
       const isReal = Boolean(

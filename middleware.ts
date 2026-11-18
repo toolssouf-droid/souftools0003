@@ -4,6 +4,7 @@ import { inspectRequest, applySecurityHeaders } from '@/lib/security/wafEngine';
 
 const locales = ['en', 'zh-CN', 'hi', 'es', 'ar', 'fr', 'bn', 'pt', 'ru', 'id', 'ur', 'de'];
 const defaultLocale = 'ar';
+const canonicalHost = 'souftools0003.enzonic.dev';
 
 export function middleware(request: NextRequest) {
   // 1. SoufShield WAF Perimeter Deep Inspection (Inspects all requests including /api)
@@ -13,6 +14,26 @@ export function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+
+  const rawHost =
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    '';
+  const requestHost = rawHost.split(',')[0].trim().toLowerCase();
+  const hostname = requestHost.split(':')[0];
+  if (
+    hostname !== canonicalHost &&
+    (hostname === 'souftools0003-4285a4de.enzonic.dev' ||
+      hostname.startsWith('souftools0003-'))
+  ) {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.protocol = 'https';
+    canonicalUrl.hostname = canonicalHost;
+    canonicalUrl.port = '';
+    return applySecurityHeaders(
+      NextResponse.redirect(canonicalUrl, 308)
+    );
+  }
 
   // 2. Pass-through API routes and internal Next assets with security headers
   if (

@@ -6,6 +6,7 @@ import {
   isServerAdminSession,
 } from "../lib/auth/serverSessionClient";
 import { validateAuthActionUrl } from "../lib/auth/emailService";
+import { getOriginFromHeaders } from "../lib/auth/betterAuth";
 
 function verifyAuthActionUrlOrigin(): void {
   const envKeys = [
@@ -156,6 +157,13 @@ async function main(): Promise<void> {
   verifyMasterAdminPasswordRequiresConfiguration();
   await verifySessionSynchronization();
   await verifyUnauthenticatedSessionDoesNotPass();
+  const previewOrigin = getOriginFromHeaders(
+    new Headers({
+      host: "souftools0003-4285a4de.enzonic.dev",
+      "x-forwarded-proto": "https",
+    })
+  );
+  assert.equal(previewOrigin, "https://souftools0003.enzonic.dev");
   console.log("Auth session reliability checks passed.");
 }
 
