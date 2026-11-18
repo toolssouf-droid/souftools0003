@@ -12,20 +12,12 @@ import { StorageRepository, UserRepository } from "@/lib/db";
 const STORAGE_ROOT =
   process.env.STORAGE_LOCAL_DIR ||
   path.join(process.cwd(), ".souftools_storage");
+const STORAGE_PATH_REQUIRED = process.env.VERCEL === "1" && !process.env.STORAGE_LOCAL_DIR?.trim();
 
 const SIGNING_SECRET =
   process.env.STORAGE_SIGNING_SECRET ||
   process.env.ENCRYPTION_SECRET ||
   "souftools-secure-storage-key-2026";
-
-// Ensure root storage directory exists
-try {
-  if (!fs.existsSync(STORAGE_ROOT)) {
-    fs.mkdirSync(STORAGE_ROOT, { recursive: true });
-  }
-} catch (err) {
-  console.warn("Storage root directory initialization:", err);
-}
 
 export interface StoredFileResult {
   fileId: string;
@@ -160,6 +152,13 @@ export const ObjectStorage = {
     metadata?: Record<string, any>;
   }): Promise<{ success: boolean; error?: string; file?: StoredFileResult }> {
     const { userId, filename, buffer, mimeType, conversationId, projectId, metadata } = params;
+
+    if (STORAGE_PATH_REQUIRED) {
+      return {
+        success: false,
+        error: "تخزين الملفات يحتاج إلى STORAGE_LOCAL_DIR لمسار تخزين دائم وقابل للكتابة على بيئة الاستضافة.",
+      };
+    }
 
     // 1. Check user storage quota
     const user = await UserRepository.getById(userId);

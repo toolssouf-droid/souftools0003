@@ -26,6 +26,22 @@ interface EmailResult {
   error?: string;
 }
 
+export const DEFAULT_AUTH_APP_URL = "https://souftools0003.enzonic.dev";
+
+export function getAuthBaseUrl(): string {
+  const configuredBaseUrl =
+    process.env.APP_URL ||
+    process.env.BETTER_AUTH_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL;
+  const baseUrl =
+    configuredBaseUrl ||
+    (process.env.NODE_ENV === "production" ? DEFAULT_AUTH_APP_URL : "http://localhost:3000");
+
+  return /^https?:\/\//i.test(baseUrl) ? baseUrl : `https://${baseUrl}`;
+}
+
 export function generateVerificationOtp(_email: string): string {
   return String(randomInt(100000, 1000000));
 }
@@ -157,17 +173,11 @@ export function validateAuthActionUrl(value: string): string {
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL ||
     process.env.VERCEL_URL;
-  if (!configuredBaseUrl) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("Set APP_URL or BETTER_AUTH_URL before sending authentication emails");
-    }
+  if (!configuredBaseUrl && process.env.NODE_ENV !== "production") {
     return url.toString();
   }
 
-  const normalizedBaseUrl = /^https?:\/\//i.test(configuredBaseUrl)
-    ? configuredBaseUrl
-    : `https://${configuredBaseUrl}`;
-  const configuredUrl = new URL(normalizedBaseUrl);
+  const configuredUrl = new URL(getAuthBaseUrl());
   if (
     (configuredUrl.protocol !== "https:" && configuredUrl.protocol !== "http:") ||
     configuredUrl.username ||

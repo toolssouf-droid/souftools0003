@@ -27,15 +27,18 @@ async function guardSensitiveAuthPost(req: NextRequest): Promise<NextResponse | 
     ? "sign-in"
     : path.endsWith("/request-password-reset")
     ? "password-reset"
+    : path.endsWith("/email-otp/send-verification-otp")
+    ? "verification-code"
     : null;
   if (!action) return null;
 
   const payload = await req.clone().json().catch(() => null);
   const email = typeof payload?.email === "string" ? payload.email.trim().toLowerCase() : "";
   const ip = getClientIp(req);
-  const ipLimit = checkRateLimit(`auth:${action}:ip:${ip}`, action === "sign-in" ? 8 : 4, 4);
+  const limit = action === "sign-in" ? 8 : action === "verification-code" ? 3 : 4;
+  const ipLimit = checkRateLimit(`auth:${action}:ip:${ip}`, limit, limit);
   const emailLimit = email
-    ? checkRateLimit(`auth:${action}:email:${email}`, action === "sign-in" ? 8 : 3, 3)
+    ? checkRateLimit(`auth:${action}:email:${email}`, limit, limit)
     : null;
 
   if (!ipLimit.allowed || (emailLimit && !emailLimit.allowed)) {

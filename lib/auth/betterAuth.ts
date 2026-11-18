@@ -10,7 +10,12 @@ import crypto from "crypto";
 import { getDb, isDbConnected } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { getInMemoryAdminConfig } from "@/lib/adminConfigStore";
-import { sendAuthActionEmail } from "@/lib/auth/emailService";
+import { emailOTP } from "better-auth/plugins";
+import {
+  getAuthBaseUrl,
+  sendAuthActionEmail,
+  sendVerificationEmail,
+} from "@/lib/auth/emailService";
 
 function getAuthCredentials() {
   const inMem = getInMemoryAdminConfig()?.authProviders || {};
@@ -69,11 +74,7 @@ export function createAuthInstance(customBaseUrl?: string) {
 
   try {
     const creds = getAuthCredentials();
-    const appUrl =
-      customBaseUrl ||
-      process.env.APP_URL ||
-      process.env.BETTER_AUTH_URL ||
-      "http://localhost:3000";
+    const appUrl = customBaseUrl || getAuthBaseUrl();
 
     const hasGoogle = Boolean(creds.googleClientId && creds.googleClientSecret);
     const hasGithub = Boolean(creds.githubClientId && creds.githubClientSecret);
@@ -141,18 +142,28 @@ export function createAuthInstance(customBaseUrl?: string) {
         sendOnSignUp: true,
         sendOnSignIn: true,
         autoSignInAfterVerification: false,
-        sendVerificationEmail: async ({ user, url }) => {
-          const result = await sendAuthActionEmail({
-            toEmail: user.email,
-            userName: user.name || undefined,
-            type: "email_verification_link",
-            actionUrl: url,
-          });
-          if (!result.success) {
-            throw new Error(result.error || "Failed to send email verification link");
-          }
-        },
       },
+
+      plugins: [
+        emailOTP({
+          otpLength: 6,
+          expiresIn: 15 * 60,
+          allowedAttempts: 3,
+          storeOTP: "hashed",
+          overrideDefaultEmailVerification: true,
+          rateLimit: { window: 60, max: 3 },
+          sendVerificationOTP: async ({ email, otp, type }) => {
+            const result = await sendVerificationEmail({
+              toEmail: email,
+              code: otp,
+              type: type === "forget-password" ? "password_reset" : "verification",
+            });
+            if (!result.success) {
+              throw new Error(result.error || "Failed to send verification code");
+            }
+          },
+        }),
+      ],
 
       socialProviders: {
         google: {

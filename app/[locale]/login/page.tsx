@@ -28,6 +28,16 @@ import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { isRtlLocale } from "@/lib/i18n";
 import { ensureServerSession, isServerAdminSession } from "@/lib/auth/serverSessionClient";
 
+function normalizeVerificationCode(value: string): string {
+  return value
+    .replace(/[٠-٩۰-۹]/g, (digit) => {
+      const codePoint = digit.charCodeAt(0);
+      return String(codePoint - (codePoint >= 0x06f0 ? 0x06f0 : 0x0660));
+    })
+    .replace(/\D/g, "")
+    .slice(0, 6);
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const params = useParams();
@@ -109,13 +119,14 @@ export default function LoginPage() {
   }, []);
 
   // State
-  const [authMode, setAuthMode] = useState<"login" | "register" | "forgot" | "reset">("login");
+  const [authMode, setAuthMode] = useState<"login" | "register" | "verify" | "forgot" | "reset">("login");
 
   // Email & Password
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -338,7 +349,7 @@ export default function LoginPage() {
       } catch {}
     }
 
-    if (authMode !== "forgot" && !password) {
+    if (authMode !== "forgot" && authMode !== "verify" && !password) {
       triggerAttack(
         isRtl
           ? "يرجى إدخال كلمة المرور للمتابعة."
@@ -363,7 +374,34 @@ export default function LoginPage() {
     setInfoMsg(null);
 
     try {
-      if (authMode === "forgot") {
+      if (authMode === "verify") {
+        if (verificationCode.length !== 6) {
+          triggerAttack(
+            isRtl
+              ? "أدخل رمز التحقق المكوّن من 6 أرقام."
+              : "Enter the 6-digit verification code."
+          );
+          return;
+        }
+
+        const response = await fetch("/api/auth/email-otp/verify-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: cleanEmail, otp: verificationCode }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.status !== true) {
+          throw new Error(data.message || data.error || "Email verification failed");
+        }
+        setAuthMode("login");
+        setPassword("");
+        setVerificationCode("");
+        setInfoMsg(
+          isRtl
+            ? "تم تأكيد البريد الإلكتروني. سجّل الدخول باستخدام كلمة المرور."
+            : "Email verified. Sign in with your password."
+        );
+      } else if (authMode === "forgot") {
         const response = await fetch("/api/auth/request-password-reset", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -418,11 +456,21 @@ export default function LoginPage() {
         });
 
         if (res.error) {
-          triggerAttack(
-            isRtl
-              ? "تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور، وإذا كان الحساب جديداً فتأكد من تأكيد البريد أولاً."
-              : "Could not sign in. Check your email and password; new accounts must verify their email first."
-          );
+          if (res.error.code === "EMAIL_NOT_VERIFIED") {
+            setAuthMode("verify");
+            setVerificationCode("");
+            setInfoMsg(
+              isRtl
+                ? "أدخل رمز التحقق الذي وصلك، أو أعد إرساله من أسفل النموذج."
+                : "Enter the verification code sent to you, or resend it below."
+            );
+          } else {
+            triggerAttack(
+              isRtl
+                ? "تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور."
+                : "Could not sign in. Check your email and password."
+            );
+          }
         } else if (res.data?.user) {
           const serverSession = await ensureServerSession();
           if (
@@ -449,7 +497,6 @@ export default function LoginPage() {
           email: cleanEmail,
           password,
           name: name.trim() || cleanEmail.split("@")[0],
-          callbackURL: `${window.location.origin}/${locale}/login?verified=true`,
         });
         if (res.error) {
           triggerAttack(
@@ -458,12 +505,13 @@ export default function LoginPage() {
               : "Could not complete sign-up. Check the password and email delivery configuration, then try again."
           );
         } else {
-          setAuthMode("login");
+          setAuthMode("verify");
           setPassword("");
+          setVerificationCode("");
           setInfoMsg(
             isRtl
-              ? "إذا كان البريد مؤهلاً للتسجيل، فستصلك رسالة تأكيد. افتح الرابط ثم سجّل الدخول."
-              : "If this email can be registered, a verification link will arrive. Open it, then sign in."
+              ? "إذا كان البريد مؤهلاً للتسجيل، فسيصلك رمز من 6 أرقام. أدخله هنا لتأكيد بريدك."
+              : "If this email can be registered, a 6-digit code will arrive. Enter it here to verify your email."
           );
         }
       }
@@ -473,6 +521,42 @@ export default function LoginPage() {
         isRtl
           ? "حدث خطأ أثناء معالجة الطلب. تحقق من اتصالك وحاول مجدداً."
           : "The request could not be completed. Check your connection and try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendVerificationCode = async () => {
+    if (!email.trim() || isLoading) return;
+
+    setIsLoading(true);
+    setErrorMsg(null);
+    setInfoMsg(null);
+    try {
+      const response = await fetch("/api/auth/email-otp/send-verification-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          type: "email-verification",
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.success !== true) {
+        throw new Error(data.message || data.error || "Could not send verification code");
+      }
+      setInfoMsg(
+        isRtl
+          ? "إذا كان البريد مسجلاً وغير مؤكد، فسيصلك رمز تحقق جديد."
+          : "If the email belongs to an unverified account, a new code will arrive shortly."
+      );
+    } catch (error) {
+      console.error("Verification code resend error:", error);
+      setErrorMsg(
+        isRtl
+          ? "تعذر إرسال الرمز الآن. انتظر قليلاً ثم حاول مجدداً."
+          : "Could not send the code right now. Wait a moment, then try again."
       );
     } finally {
       setIsLoading(false);
@@ -607,6 +691,10 @@ export default function LoginPage() {
                 ? isRtl
                   ? "إعادة تعيين كلمة المرور"
                   : "Reset your password"
+                : authMode === "verify"
+                ? isRtl
+                  ? "تأكيد البريد الإلكتروني"
+                  : "Verify your email"
                 : isRtl
                 ? "اختر كلمة مرور جديدة"
                 : "Choose a new password"}
@@ -719,6 +807,7 @@ export default function LoginPage() {
                       type="email"
                       required
                       value={email}
+                      readOnly={authMode === "verify"}
                       onChange={(e) => setEmail(e.target.value)}
                       onFocus={handleInputFocus}
                       onBlur={handleInputBlur}
@@ -727,6 +816,34 @@ export default function LoginPage() {
                     />
                     <Mail className={`w-4 h-4 text-[#4a7070] absolute top-1/2 -translate-y-1/2 ${isRtl ? "right-3" : "left-3"}`} />
                   </div>
+                </div>
+              )}
+
+              {authMode === "verify" && (
+                <div>
+                  <label htmlFor="verification-code" className="block text-xs text-[#4a7070] mb-1 font-medium">
+                    {isRtl ? "رمز التحقق" : "Verification code"}
+                  </label>
+                  <input
+                    id="verification-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    dir="ltr"
+                    required
+                    maxLength={6}
+                    pattern="[0-9]{6}"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(normalizeVerificationCode(e.target.value))}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
+                    placeholder="000000"
+                    aria-describedby="verification-code-hint"
+                    className="w-full px-3.5 py-3 rounded-xl bg-[#0a0f0f]/80 border border-[#00d4aa]/25 focus:border-[#00d4aa] focus:ring-1 focus:ring-[#00d4aa] text-[#e8f5f5] text-base text-center tracking-[0.45em] placeholder-[#4a7070]/50 outline-none transition-all"
+                  />
+                  <p id="verification-code-hint" className="mt-1 text-xs text-[#4a7070]">
+                    {isRtl ? "أدخل الرمز المكوّن من 6 أرقام المرسل إلى بريدك." : "Enter the 6-digit code sent to your email."}
+                  </p>
                 </div>
               )}
 
@@ -745,7 +862,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {authMode !== "forgot" && (
+              {authMode !== "forgot" && authMode !== "verify" && (
                 <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="block text-xs text-[#4a7070] font-medium">
@@ -831,7 +948,9 @@ export default function LoginPage() {
                       {authMode === "login"
                         ? isRtl ? "دخول للمنصة" : "Sign In"
                         : authMode === "register"
-                        ? isRtl ? "إنشاء الحساب وإرسال رابط التأكيد" : "Create account and send verification link"
+                        ? isRtl ? "إنشاء الحساب وإرسال رمز التأكيد" : "Create account and send verification code"
+                        : authMode === "verify"
+                        ? isRtl ? "تأكيد الرمز" : "Verify code"
                         : authMode === "forgot"
                         ? isRtl ? "إرسال رابط إعادة التعيين" : "Send reset link"
                         : isRtl ? "حفظ كلمة المرور الجديدة" : "Save new password"}
@@ -840,6 +959,19 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
+
+            {authMode === "verify" && (
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  onClick={handleResendVerificationCode}
+                  disabled={isLoading}
+                  className="text-xs text-[#00d4aa] hover:text-[#00f5c4] transition-colors disabled:opacity-60"
+                >
+                  {isRtl ? "لم يصلك الرمز؟ أعد إرساله" : "Didn't receive the code? Resend it"}
+                </button>
+              </div>
+            )}
 
             <div className="mt-4 pt-3 border-t border-[#00d4aa]/15 text-center">
               {authMode === "login" || authMode === "register" ? (

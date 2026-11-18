@@ -12,7 +12,7 @@
   - *ملاحظة*: تم ترحيل طبقة قاعدة البيانات من PostgreSQL/PGlite إلى Turso؛ وتبقى سكربتات الترحيل والتحقق (`scripts/migrate-pg-to-turso.ts`، `scripts/verify-turso-migration.ts`) لأغراض الترحيل والتوافق التاريخي.
 - **طابور المهام الخلفية وتخزين الكائنات**:
   - **طابور المهام**: `lib/queue/workerQueue.ts` يعتمد على جدول `worker_jobs` في Turso بنظام `Claim / Lease`.
-  - **تخزين الملفات الخاص**: `lib/storage/objectStorage.ts` يحفظ الملفات محلياً على قرص الخادم (`STORAGE_LOCAL_DIR` أو `.souftools_storage`) مع فحص Magic Bytes وروابط تنزيل موقعة بـ HMAC-SHA256، ويحفظ بيانات الوصف والحصص في Turso (`storage_objects`).
+  - **تخزين الملفات الخاص**: `lib/storage/objectStorage.ts` يحفظ الملفات محلياً على قرص الخادم (`STORAGE_LOCAL_DIR` أو `.souftools_storage`) مع فحص Magic Bytes وروابط تنزيل موقعة بـ HMAC-SHA256، ويحفظ بيانات الوصف والحصص في Turso (`storage_objects`). يلزم مسار دائم وقابل للكتابة في الإنتاج؛ بيئات serverless دون قرص دائم لا تدعم رفع ملفات مستديم حالياً.
 - **الذكاء الاصطناعي والوكلاء**:
   - موجه المزودين (`lib/router.ts` و`lib/providers/index.ts`) يسجل 38 مزود دردشة/LLM، ومزودين للصوت، ومزوداً للتضمينات. يستخدم واجهات المزودين الفعلية (Gemini SDK، OpenAI Responses، Anthropic Messages، Cohere Chat v2، Bedrock Converse، Replicate Predictions، وواجهات OpenAI-compatible)، مع جلب حي للنماذج المتاحة في الحساب.
   - محرك محادثة وتفكير استدلالي (`lib/agent/agentRuntime.ts`) مع فرز نوايا (`classifierEngine.ts`, `zeroComputeTriage.ts`) وأدوات حقيقية (وقت، حاسبة، بحث ويب، توليد ملفات وصور، ساندبوكس).
@@ -41,8 +41,8 @@ npm install
   - `TURSO_DATABASE_URL`: رابط Turso Cloud (`libsql://...` أو `https://...`) أو مسار محلي مثل `file:./.turso_local/souftools.db`.
   - `TURSO_AUTH_TOKEN`: مطلوب عند استخدام رابط Turso Cloud بعيد.
 - **الذكاء الاصطناعي**: `GEMINI_API_KEY` (أو `GEMINI_API_KEYS` لتوزيع الحمولة).
-- **المصادقة والتشفير والأمان**: `BETTER_AUTH_SECRET`، و`APP_URL` أو `BETTER_AUTH_URL` (أحدهما إلزامي في الإنتاج لتثبيت نطاق روابط التحقق وإعادة تعيين كلمة المرور)، `SESSION_SECRET`، `MASTER_ENCRYPTION_KEY` (أو `DATA_ENCRYPTION_KEY`)، `ENCRYPTION_SECRET`، `STORAGE_SIGNING_SECRET`، `ADMIN_EMAIL`، `ADMIN_MASTER_PASSWORD_HASH`، `CRON_SECRET`.
-- **اختياري (القنوات والبريد وOAuth)**: `TELEGRAM_BOT_TOKEN`، `TELEGRAM_WEBHOOK_SECRET`، `GOOGLE_CLIENT_ID`/`SECRET`، `GITHUB_CLIENT_ID`/`SECRET`، `SMTP_*` / `RESEND_API_KEY`.
+- **المصادقة والتشفير والأمان**: `BETTER_AUTH_SECRET`، ويفضّل ضبط `APP_URL` أو `BETTER_AUTH_URL` على نطاق الإنتاج؛ عند غيابهما يستخدم النظام `https://souftools0003.enzonic.dev` في روابط إعادة التعيين، `SESSION_SECRET`، `MASTER_ENCRYPTION_KEY` (أو `DATA_ENCRYPTION_KEY`)، `ENCRYPTION_SECRET`، `STORAGE_SIGNING_SECRET`، `ADMIN_EMAIL`، `ADMIN_MASTER_PASSWORD_HASH`، `CRON_SECRET`.
+- **البريد (إلزامي لإرسال رموز التحقق وروابط الاستعادة)**: إعداد SMTP (`SMTP_USER` و`SMTP_PASS` مع `SMTP_HOST`/`SMTP_PORT`) أو `RESEND_API_KEY`. **اختياري (القنوات وOAuth)**: `TELEGRAM_BOT_TOKEN`، `TELEGRAM_WEBHOOK_SECRET`، `GOOGLE_CLIENT_ID`/`SECRET`، `GITHUB_CLIENT_ID`/`SECRET`.
 
 ### 3. الأوامر المتاحة
 ```bash

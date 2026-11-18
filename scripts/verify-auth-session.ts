@@ -8,8 +8,17 @@ import {
 import { validateAuthActionUrl } from "../lib/auth/emailService";
 
 function verifyAuthActionUrlOrigin(): void {
-  const originalAppUrl = process.env.APP_URL;
-  const originalBetterAuthUrl = process.env.BETTER_AUTH_URL;
+  const envKeys = [
+    "APP_URL",
+    "BETTER_AUTH_URL",
+    "NEXT_PUBLIC_APP_URL",
+    "VERCEL_PROJECT_PRODUCTION_URL",
+    "VERCEL_URL",
+  ] as const;
+  const originalEnv = Object.fromEntries(
+    envKeys.map((key) => [key, process.env[key]])
+  );
+  const originalNodeEnv = process.env.NODE_ENV;
 
   try {
     process.env.APP_URL = "https://souftools.example";
@@ -27,11 +36,29 @@ function verifyAuthActionUrlOrigin(): void {
       () => validateAuthActionUrl("http://souftools.example/api/auth/verify-email?token=test"),
       /configured application origin/
     );
+
+    for (const key of envKeys) {
+      delete process.env[key];
+    }
+    Reflect.set(process.env, "NODE_ENV", "production");
+    assert.equal(
+      validateAuthActionUrl(
+        "https://souftools0003.enzonic.dev/api/auth/reset-password?token=test"
+      ),
+      "https://souftools0003.enzonic.dev/api/auth/reset-password?token=test"
+    );
+    assert.throws(
+      () => validateAuthActionUrl("https://attacker.example/api/auth/reset-password?token=test"),
+      /configured application origin/
+    );
   } finally {
-    if (originalAppUrl === undefined) delete process.env.APP_URL;
-    else process.env.APP_URL = originalAppUrl;
-    if (originalBetterAuthUrl === undefined) delete process.env.BETTER_AUTH_URL;
-    else process.env.BETTER_AUTH_URL = originalBetterAuthUrl;
+    for (const key of envKeys) {
+      const value = originalEnv[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    if (originalNodeEnv === undefined) Reflect.deleteProperty(process.env, "NODE_ENV");
+    else Reflect.set(process.env, "NODE_ENV", originalNodeEnv);
   }
 }
 
