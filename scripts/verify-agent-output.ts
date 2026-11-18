@@ -12,6 +12,10 @@ const validDecision = parseAgentDecisionResponse(
 assert.equal(validDecision?.action.type, "CALL_TOOLS");
 assert.equal(parseAgentDecisionResponse('{"thoughtSummary":"تحليل","action":'), null);
 assert.equal(parseAgentDecisionResponse('{"action":{"type":"UNKNOWN"}}'), null);
+assert.equal(
+  parseAgentDecisionResponse('{"finalResponse":"إجابة نهائية واضحة"}')?.action.type,
+  "FINAL_ANSWER"
+);
 
 assert.equal(
   isAgentDecisionPayload('{"thoughtSummary":"خطة داخلية","action":{"type":"CALL_TOOLS","toolsToCall":[]}}'),

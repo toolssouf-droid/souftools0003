@@ -68,7 +68,16 @@ export function parseAgentDecisionResponse(text?: string | null): AgentDecisionR
       continue;
     }
 
-    if (!isRecord(parsed) || !isRecord(parsed.action)) continue;
+    if (!isRecord(parsed)) continue;
+    if (typeof parsed.finalResponse === "string" && parsed.finalResponse.trim()) {
+      return {
+        action: {
+          type: "FINAL_ANSWER",
+          finalResponse: parsed.finalResponse.trim(),
+        },
+      };
+    }
+    if (!isRecord(parsed.action)) continue;
     if (typeof parsed.action.type !== "string" || !ACTION_TYPES.has(parsed.action.type)) continue;
     return parsed as AgentDecisionRecord;
   }
