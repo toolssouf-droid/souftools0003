@@ -27,12 +27,12 @@ import {
   Maximize2,
 } from "lucide-react";
 import { downloadImage, copyToClipboard } from "@/lib/utils";
+import { isAgentDecisionPayload } from "@/lib/agent/agentDecisionParser";
 import { ChatMessage, SoufAISuggestionItem, useChatStore } from "@/store/chatStore";
 import { ModelLogo, SoufToolsLogo } from "@/components/ui/Logos";
 import { FormattedMessage } from "./FormattedMessage";
 import { SoufSourcesList } from "@/components/sources/SoufSourcesList";
 import { MemoryBadge } from "./MemoryBadge";
-import { ReasoningBlock } from "./ReasoningBlock";
 import { LiveAgentActivityCenter } from "./LiveAgentActivityCenter";
 import { TimeClockWidget } from "@/components/widgets/TimeClockWidget";
 import { AmbiguousTimeWidget } from "@/components/widgets/AmbiguousTimeWidget";
@@ -73,6 +73,12 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
 
   const isUser = message.role === "user";
   const isRtl = isRtlLocale(locale);
+  const displayedContent =
+    !isUser && isAgentDecisionPayload(message.content)
+      ? isRtl
+        ? "لم يتمكن الوكيل من إنشاء إجابة نهائية صالحة. أعد إرسال الطلب للحصول على رد جديد."
+        : "The agent did not produce a usable final response. Resend the request for a new answer."
+      : message.content;
 
   // Retrieve user prompt for contextually determining agent activity necessity
   const userPrompt = useMemo(() => {
@@ -88,7 +94,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
   }, [message.id, isUser]);
 
   const handleCopy = async () => {
-    await copyToClipboard(message.content);
+    await copyToClipboard(displayedContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -126,7 +132,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
     return estimatedTokens;
   };
 
-  const tokenCount = calculateEstimatedTokens(message.content);
+  const tokenCount = calculateEstimatedTokens(displayedContent);
 
   return (
     <motion.div
@@ -285,20 +291,8 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
               />
             )}
 
-            {/* Reasoning Block for Deep Thinking / Analysis */}
-            {!isUser && (message.reasoningMode || (message.reasoningSteps && message.reasoningSteps.length > 0)) && (
-              <ReasoningBlock
-                reasoningMode={message.reasoningMode}
-                reasoningSteps={message.reasoningSteps}
-                reflectionSteps={message.reflectionSteps}
-                hypotheses={message.hypotheses}
-                confidenceScore={message.confidenceScore}
-                locale={locale}
-              />
-            )}
-
             <FormattedMessage
-              content={message.content}
+              content={displayedContent}
               sources={message.sources}
               isRtl={isRtl}
             />

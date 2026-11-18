@@ -79,6 +79,9 @@ export function compileAgentActivityState(
   state: AgentState,
   accumulatedSources: SearchSourceItem[] = []
 ): AgentActivityState {
+  const internalReasoningTitle =
+    /(?:تحليل واستدلال أولي|تقييم ومتابعة الاستدلال|توليد مسارات التفكير|مراجعة ونقد ذاتي|Tree of Thoughts|Reflexion)/i;
+  const safeActivities = state.activities.filter((activity) => !internalReasoningTitle.test(activity.title));
   let category: TaskCategory = "agent";
   const allText = (state.userRequest + " " + state.plan.join(" ") + " " + state.activities.map((a) => a.title).join(" ")).toLowerCase();
 
@@ -88,19 +91,19 @@ export function compileAgentActivityState(
   else if (allText.includes("ملف") || allText.includes("مستند") || allText.includes("file")) category = "files";
   else if (allText.includes("صورة") || allText.includes("رسم") || allText.includes("image")) category = "image";
 
-  const toolsUsed = Array.from(new Set(state.activities.map((a) => a.tool).filter(Boolean))).map((t, idx) => ({
+  const toolsUsed = Array.from(new Set(safeActivities.map((a) => a.tool).filter(Boolean))).map((t, idx) => ({
     id: `tool_${idx}`,
     name: t!,
     status: (state.status === "completed" ? "completed" : "running") as any,
   }));
 
-  const lastActivity = state.activities[state.activities.length - 1];
+  const lastActivity = safeActivities[safeActivities.length - 1];
 
   return {
     taskId: state.taskId,
     category,
     status: (state.status as string) === "running" || (state.status as string) === "planning" || (state.status as string) === "executing" ? "running" : (state.status as any),
-    activities: [...state.activities],
+    activities: safeActivities,
     planSteps: state.plan.map((p, idx) => ({
       stepNumber: idx + 1,
       title: p,

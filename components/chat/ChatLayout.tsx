@@ -227,10 +227,6 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
       webSearchUsed?: boolean;
       sources?: SearchSource[];
       agentSteps?: string[];
-      reasoningSteps?: string[];
-      reflectionSteps?: string[];
-      hypotheses?: string[];
-      confidenceScore?: number;
       reasoningMode?: "deep_thinking" | "deep_analysis" | "fast_mode";
       activityState?: AgentActivityState;
       suggestions?: SoufAISuggestionItem[];
@@ -419,15 +415,24 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
 
               const completedText = data.text?.trim() || data.finalAnswer?.trim() || "";
               const streamedText = accumulatedLiveTokens.trim();
+              const statusFallback =
+                data.status === "cancelled"
+                  ? isRtl
+                    ? "تم إيقاف المهمة."
+                    : "The task was stopped."
+                  : data.status === "waiting_for_user"
+                  ? data.questionTitle || (isRtl ? "يلزم توضيح إضافي لمتابعة المهمة." : "More information is needed to continue.")
+                  : data.status === "failed"
+                  ? isRtl
+                    ? "تعذر على الوكيل إكمال الطلب. أعد المحاولة."
+                    : "The agent could not complete the request. Please try again."
+                  : isRtl
+                  ? "لم يُرجع الوكيل إجابة صالحة. أعد إرسال الطلب."
+                  : "The agent returned no usable answer. Please resend your request.";
               const finalStreamText =
                 completedText && completedText.length >= streamedText.length
                   ? completedText
-                  : streamedText ||
-                    completedText ||
-                    (data.status === "cancelled"
-                      ? (isRtl ? "تم إيقاف المهمة." : "The task was stopped.")
-                      : undefined) ||
-                    (isRtl ? "تمت معالجة استفسارك بنجاح." : "Your request was processed successfully.");
+                  : streamedText || completedText || statusFallback;
 
               const metadataPayload = {
                 modelUsed: data.modelUsed,
@@ -435,12 +440,8 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({ locale }) => {
                 keyUsedMasked: data.keyUsedMasked,
                 webSearchUsed: data.webSearchUsed || false,
                 sources: finalSources,
-                agentSteps: data.agentSteps || [],
-                reasoningSteps: data.reasoningSteps || data.agentSteps || [],
-                reflectionSteps: data.reflectionSteps || [],
-                hypotheses: data.hypotheses || [],
-                confidenceScore: data.confidenceScore,
-                reasoningMode: data.reasoningMode || (data.agentSteps && data.agentSteps.length > 1 ? "deep_thinking" : undefined),
+                agentSteps: [],
+                reasoningMode: data.reasoningMode,
                 activityState: data.activityState || payload.data.state || undefined,
                 suggestions: data.suggestions || [],
                 queriesUsed: data.queriesUsed || [],

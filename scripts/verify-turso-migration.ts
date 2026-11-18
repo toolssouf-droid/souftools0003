@@ -240,6 +240,12 @@ async function main() {
         displayName: "User A",
       });
       assert.equal(userA.id, "usr_verify_a");
+      const caseInsensitiveUser = await UserRepository.getByEmail("USERA@SOUFTOOLS.TEST");
+      assert.equal(
+        caseInsensitiveUser?.id,
+        userA.id,
+        "User lookup must treat email addresses case-insensitively"
+      );
 
       await UserRepository.upsertUser({
         id: "usr_verify_b",

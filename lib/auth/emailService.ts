@@ -6,13 +6,17 @@
  */
 
 import nodemailer from "nodemailer";
+import { randomInt } from "node:crypto";
 import { loadServerAdminConfig } from "@/lib/adminConfigStore";
+
+type EmailMessageType = "verification" | "password_reset" | "email_verification_link" | "password_reset_link";
 
 interface SendVerificationOptions {
   toEmail: string;
-  code: string;
-  type?: "verification" | "password_reset" | "login_otp";
+  code?: string;
+  type?: EmailMessageType | "login_otp";
   userName?: string;
+  actionUrl?: string;
 }
 
 interface EmailResult {
@@ -22,145 +26,25 @@ interface EmailResult {
   error?: string;
 }
 
-// Persistent & In-Memory Verification Codes Store with guaranteed 15-minute TTL
-interface StoredOtp {
-  code: string;
-  expiresAt: number;
-  attempts: number;
-  verified: boolean;
-}
-
-declare global {
-  var _soufOtpStore: Map<string, StoredOtp> | undefined;
-}
-
-const otpStore: Map<string, StoredOtp> =
-  globalThis._soufOtpStore || (globalThis._soufOtpStore = new Map());
-
-// Helper to generate secure 6-digit verification code with 15 minutes guaranteed lifespan
-export function generateVerificationOtp(email: string): string {
-  const cleanEmail = email.toLowerCase().trim();
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = Date.now() + 15 * 60 * 1000; // 15 mins exact
-
-  // 1. Save in global memory cache
-  otpStore.set(cleanEmail, {
-    code,
-    expiresAt,
-    attempts: 0,
-    verified: false,
-  });
-
-  // 2. Persist in PostgreSQL verification table in the background
-  if (typeof window === "undefined") {
-    setTimeout(async () => {
-      try {
-        const pool = (globalThis as any)._soufPostgresPool;
-        if (pool) {
-          const id = `otp_${cleanEmail}`;
-          const expiresDate = new Date(expiresAt);
-          const now = new Date();
-          await pool.query(
-            `INSERT INTO "verification" (id, identifier, value, expires_at, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             ON CONFLICT (id) DO UPDATE SET value = $3, expires_at = $4, updated_at = $6;`,
-            [id, cleanEmail, code, expiresDate, now, now]
-          ).catch(() => {});
-        }
-      } catch (dbErr) {
-        // Non-blocking fallback
-      }
-    }, 0);
-  }
-
-  return code;
-}
-
-// Helper to verify code with database fallback and persistence (does NOT delete until account is created)
-export async function verifyOtpCode(
-  email: string,
-  code: string
-): Promise<{ valid: boolean; reason?: string }> {
-  const cleanEmail = email.toLowerCase().trim();
-  let record = otpStore.get(cleanEmail);
-
-  // If memory was cleared (e.g. server restart), check PostgreSQL verification table
-  if (!record) {
-    try {
-      const pool = (globalThis as any)._soufPostgresPool;
-      if (pool) {
-        const dbRes = await pool.query(
-          `SELECT value, expires_at FROM "verification" WHERE id = $1 OR identifier = $2 LIMIT 1;`,
-          [`otp_${cleanEmail}`, cleanEmail]
-        );
-        if (dbRes?.rows?.[0]) {
-          const row = dbRes.rows[0];
-          const expTime = new Date(row.expires_at).getTime();
-          if (Date.now() < expTime) {
-            record = {
-              code: String(row.value).trim(),
-              expiresAt: expTime,
-              attempts: 0,
-              verified: false,
-            };
-            otpStore.set(cleanEmail, record);
-          }
-        }
-      }
-    } catch (checkErr) {
-      // Non-blocking
-    }
-  }
-
-  if (!record) {
-    return { valid: false, reason: "لم يتم العثور على رمز تأكيد نشط لهذا البريد أو انتهت صلاحيته." };
-  }
-
-  if (Date.now() > record.expiresAt) {
-    otpStore.delete(cleanEmail);
-    return { valid: false, reason: "انتهت صلاحية رمز التأكيد (صلاحية الرمز 15 دقيقة). يرجى طلب رمز جديد." };
-  }
-
-  if (record.attempts >= 5) {
-    otpStore.delete(cleanEmail);
-    return { valid: false, reason: "تم تجاوز الحد الأقصى للمحاولات الخاطئة. يرجى طلب رمز جديد." };
-  }
-
-  if (record.code !== code.trim()) {
-    record.attempts += 1;
-    return { valid: false, reason: `رمز التأكيد غير صحيح. المتبقي ${5 - record.attempts} محاولات.` };
-  }
-
-  // Mark as verified but KEEP IT IN STORE so user can retry signup if database is slow
-  record.verified = true;
-  return { valid: true };
-}
-
-// Clean up OTP only after user registration is 100% completed
-export async function consumeOtpCode(email: string): Promise<void> {
-  const cleanEmail = email.toLowerCase().trim();
-  otpStore.delete(cleanEmail);
-
-  try {
-    const pool = (globalThis as any)._soufPostgresPool;
-    if (pool) {
-      await pool.query(
-        `DELETE FROM "verification" WHERE id = $1 OR identifier = $2;`,
-        [`otp_${cleanEmail}`, cleanEmail]
-      ).catch(() => {});
-    }
-  } catch {}
+export function generateVerificationOtp(_email: string): string {
+  return String(randomInt(100000, 1000000));
 }
 
 /**
  * Builds HTML Email Template with SoufTools brand styling
  */
-function buildEmailHtml(toEmail: string, code: string, type: string, userName?: string): string {
-  const title = type === "password_reset" 
-    ? "إعادة تعيين كلمة المرور - SoufTools"
-    : "تأكيد وتفعيل البريد الإلكتروني - SoufTools";
-  
-  const greeting = userName ? `مرحباً ${userName}،` : "مرحباً بك،";
+function buildEmailHtml(
+  toEmail: string,
+  code: string,
+  type: string,
+  userName?: string,
+  actionUrl?: string
+): string {
+  const isPasswordReset = type === "password_reset" || type === "password_reset_link";
+  const isActionLink = type === "password_reset_link" || type === "email_verification_link";
+  const title = isPasswordReset ? "إعادة تعيين كلمة المرور - SoufTools" : "تأكيد وتفعيل البريد الإلكتروني - SoufTools";
+  const greeting = userName ? `مرحباً ${escapeHtml(userName)}،` : "مرحباً بك،";
+  const safeActionUrl = actionUrl ? escapeHtml(actionUrl) : "";
 
   return `
 <!DOCTYPE html>
@@ -192,21 +76,27 @@ function buildEmailHtml(toEmail: string, code: string, type: string, userName?: 
             <td style="padding: 30px 25px;">
               <h2 style="margin: 0 0 12px; font-size: 18px; color: #ffffff; text-align: right;">${greeting}</h2>
               <p style="margin: 0 0 20px; color: #a2c4c4; font-size: 14px; line-height: 1.6; text-align: right;">
-                ${type === "password_reset" 
-                  ? "لقد تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في SoufTools. يرجى استخدام رمز الأمان الموقت التالي:"
-                  : "شكراً لتسجيلك في منصة SoufTools. لتأكيد وتوثيق بريدك الإلكتروني وتفعيل حسابك بأمان، يرجى إدخال الرمز التالي:"}
+                ${isActionLink
+                  ? isPasswordReset
+                    ? "استخدم الرابط الآمن أدناه لاختيار كلمة مرور جديدة. ينتهي الرابط خلال ساعة."
+                    : "أكد عنوان بريدك الإلكتروني عبر الرابط أدناه لإكمال إنشاء حسابك."
+                  : isPasswordReset
+                    ? "لقد تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في SoufTools. استخدم رمز الأمان المؤقت التالي:"
+                    : "شكراً لتسجيلك في منصة SoufTools. أدخل الرمز التالي لتأكيد بريدك الإلكتروني:"}
               </p>
 
-              <!-- OTP Code Display Card -->
-              <div style="margin: 25px 0; padding: 22px; background: #080d0d; border: 2px dashed #00d4aa; border-radius: 16px; text-align: center;">
-                <div style="font-size: 12px; color: #88b0b0; margin-bottom: 8px; font-weight: 600; text-transform: uppercase;">رمز التأكيد الخاص بك</div>
-                <div style="font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #00f5c4; font-family: monospace;">
-                  ${code}
-                </div>
-                <div style="font-size: 11px; color: #6e9999; margin-top: 10px;">
-                  ⏳ هذا الرمز صالح لمدة <strong style="color: #00d4aa;">15 دقيقة</strong> فقط
-                </div>
-              </div>
+              ${isActionLink
+                ? `<div style="margin: 25px 0; text-align: center;">
+                    <a href="${safeActionUrl}" style="display:inline-block;padding:14px 24px;border-radius:12px;background:#00d4aa;color:#07110f;text-decoration:none;font-weight:700;">
+                      ${isPasswordReset ? "إعادة تعيين كلمة المرور" : "تأكيد البريد الإلكتروني"}
+                    </a>
+                  </div>
+                  <p style="color:#88b0b0;font-size:12px;line-height:1.6;word-break:break-all;">إذا لم يعمل الزر، افتح هذا الرابط:<br>${safeActionUrl}</p>`
+                : `<div style="margin: 25px 0; padding: 22px; background: #080d0d; border: 2px dashed #00d4aa; border-radius: 16px; text-align: center;">
+                    <div style="font-size: 12px; color: #88b0b0; margin-bottom: 8px; font-weight: 600; text-transform: uppercase;">رمز التأكيد الخاص بك</div>
+                    <div style="font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #00f5c4; font-family: monospace;">${escapeHtml(code)}</div>
+                    <div style="font-size: 11px; color: #6e9999; margin-top: 10px;">⏳ هذا الرمز صالح لمدة <strong style="color: #00d4aa;">15 دقيقة</strong> فقط</div>
+                  </div>`}
 
               <p style="margin: 0 0 10px; color: #88b0b0; font-size: 12px; line-height: 1.5; text-align: right;">
                 ⚠️ إذا لم تقم بطلب هذا الرمز، يمكنك تجاهل هذه الرسالة بأمان؛ حسابك محمي بالكامل.
@@ -229,6 +119,65 @@ function buildEmailHtml(toEmail: string, code: string, type: string, userName?: 
 </body>
 </html>
   `;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]!);
+}
+
+function getEmailSubject(type?: string): string {
+  if (type === "password_reset" || type === "password_reset_link") {
+    return type === "password_reset_link"
+      ? "🔐 إعادة تعيين كلمة المرور - SoufTools"
+      : "🔐 رمز إعادة تعيين كلمة المرور - SoufTools";
+  }
+  if (type === "email_verification_link") return "⚡ تأكيد البريد الإلكتروني - SoufTools";
+  return "⚡ رمز تأكيد البريد الإلكتروني - SoufTools";
+}
+
+export function validateAuthActionUrl(value: string): string {
+  const url = new URL(value);
+  if ((url.protocol !== "https:" && url.protocol !== "http:") || url.username || url.password) {
+    throw new Error("Invalid authentication action URL");
+  }
+
+  if (process.env.NODE_ENV === "production" && url.protocol !== "https:") {
+    throw new Error("Authentication action URLs must use HTTPS in production");
+  }
+
+  const configuredBaseUrl =
+    process.env.APP_URL ||
+    process.env.BETTER_AUTH_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL;
+  if (!configuredBaseUrl) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Set APP_URL or BETTER_AUTH_URL before sending authentication emails");
+    }
+    return url.toString();
+  }
+
+  const normalizedBaseUrl = /^https?:\/\//i.test(configuredBaseUrl)
+    ? configuredBaseUrl
+    : `https://${configuredBaseUrl}`;
+  const configuredUrl = new URL(normalizedBaseUrl);
+  if (
+    (configuredUrl.protocol !== "https:" && configuredUrl.protocol !== "http:") ||
+    configuredUrl.username ||
+    configuredUrl.password ||
+    url.origin !== configuredUrl.origin
+  ) {
+    throw new Error("Authentication action URL does not match the configured application origin");
+  }
+
+  return url.toString();
 }
 
 /**
@@ -276,8 +225,8 @@ async function sendViaSmtp(
         const info = await gmailTransporter.sendMail({
           from,
           to: opts.toEmail,
-          subject: opts.type === "password_reset" ? "🔐 رمز إعادة تعيين كلمة المرور - SoufTools" : "⚡ رمز تأكيد البريد الإلكتروني - SoufTools",
-          html: buildEmailHtml(opts.toEmail, opts.code, opts.type || "verification", opts.userName),
+          subject: getEmailSubject(opts.type),
+          html: buildEmailHtml(opts.toEmail, opts.code || "", opts.type || "verification", opts.userName, opts.actionUrl),
         });
 
         return { success: true, messageId: info.messageId };
@@ -307,8 +256,8 @@ async function sendViaSmtp(
       const info = await directTransporter.sendMail({
         from,
         to: opts.toEmail,
-        subject: opts.type === "password_reset" ? "🔐 رمز إعادة تعيين كلمة المرور - SoufTools" : "⚡ رمز تأكيد البريد الإلكتروني - SoufTools",
-        html: buildEmailHtml(opts.toEmail, opts.code, opts.type || "verification", opts.userName),
+        subject: getEmailSubject(opts.type),
+        html: buildEmailHtml(opts.toEmail, opts.code || "", opts.type || "verification", opts.userName, opts.actionUrl),
       });
 
       return { success: true, messageId: info.messageId };
@@ -339,8 +288,8 @@ async function sendViaSmtp(
         const info = await tlsTransporter.sendMail({
           from,
           to: opts.toEmail,
-          subject: opts.type === "password_reset" ? "🔐 رمز إعادة تعيين كلمة المرور - SoufTools" : "⚡ رمز تأكيد البريد الإلكتروني - SoufTools",
-          html: buildEmailHtml(opts.toEmail, opts.code, opts.type || "verification", opts.userName),
+          subject: getEmailSubject(opts.type),
+          html: buildEmailHtml(opts.toEmail, opts.code || "", opts.type || "verification", opts.userName, opts.actionUrl),
         });
 
         return { success: true, messageId: info.messageId };
@@ -384,8 +333,8 @@ async function sendViaHttpGateway(
       body: JSON.stringify({
         from: fromEmail || "SoufTools <onboarding@resend.dev>",
         to: opts.toEmail,
-        subject: opts.type === "password_reset" ? "🔐 رمز إعادة تعيين كلمة المرور - SoufTools" : "⚡ رمز تأكيد البريد الإلكتروني - SoufTools",
-        html: buildEmailHtml(opts.toEmail, opts.code, opts.type || "verification", opts.userName),
+        subject: getEmailSubject(opts.type),
+        html: buildEmailHtml(opts.toEmail, opts.code || "", opts.type || "verification", opts.userName, opts.actionUrl),
       }),
     });
 
@@ -405,7 +354,7 @@ async function sendViaHttpGateway(
  * Main Dual-Engine Dispatcher:
  * Tries SMTP first; if it fails or is unconfigured, automatically falls back to HTTP Gateway (or vice versa).
  */
-export async function sendVerificationEmail(opts: SendVerificationOptions): Promise<EmailResult> {
+async function dispatchEmail(opts: SendVerificationOptions): Promise<EmailResult> {
   const adminConfig = await loadServerAdminConfig();
   const emailSettings = (adminConfig as any)?.emailSettings || {};
 
@@ -460,13 +409,22 @@ export async function sendVerificationEmail(opts: SendVerificationOptions): Prom
     console.warn("Secondary HTTP Gateway failed:", httpRes.error);
   }
 
-  // 3. Fallback logging for debug:
-  console.log(`[SoufTools Verification] OTP Code for ${opts.toEmail}: ${opts.code}`);
-  
-  // Return honest failure result with clear diagnostic message
   return {
     success: false,
     engineUsed: "none",
     error: failureSummary || "لم يتم إرسال الرسالة: يرجى التحقق من صحة بريد وكلمة مرور التطبيقات في لوحة التحكم.",
   };
+}
+
+export async function sendVerificationEmail(opts: SendVerificationOptions): Promise<EmailResult> {
+  return dispatchEmail(opts);
+}
+
+export async function sendAuthActionEmail(
+  opts: Omit<SendVerificationOptions, "code"> & { actionUrl: string; type: "email_verification_link" | "password_reset_link" }
+): Promise<EmailResult> {
+  return dispatchEmail({
+    ...opts,
+    actionUrl: validateAuthActionUrl(opts.actionUrl),
+  });
 }

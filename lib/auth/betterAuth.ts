@@ -10,6 +10,7 @@ import crypto from "crypto";
 import { getDb, isDbConnected } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { getInMemoryAdminConfig } from "@/lib/adminConfigStore";
+import { sendAuthActionEmail } from "@/lib/auth/emailService";
 
 function getAuthCredentials() {
   const inMem = getInMemoryAdminConfig()?.authProviders || {};
@@ -118,8 +119,39 @@ export function createAuthInstance(customBaseUrl?: string) {
 
       emailAndPassword: {
         enabled: true,
-        requireEmailVerification: false,
+        requireEmailVerification: true,
         minPasswordLength: 6,
+        autoSignIn: false,
+        resetPasswordTokenExpiresIn: 60 * 60,
+        revokeSessionsOnPasswordReset: true,
+        sendResetPassword: async ({ user, url }) => {
+          const result = await sendAuthActionEmail({
+            toEmail: user.email,
+            userName: user.name || undefined,
+            type: "password_reset_link",
+            actionUrl: url,
+          });
+          if (!result.success) {
+            throw new Error(result.error || "Failed to send password reset email");
+          }
+        },
+      },
+
+      emailVerification: {
+        sendOnSignUp: true,
+        sendOnSignIn: true,
+        autoSignInAfterVerification: false,
+        sendVerificationEmail: async ({ user, url }) => {
+          const result = await sendAuthActionEmail({
+            toEmail: user.email,
+            userName: user.name || undefined,
+            type: "email_verification_link",
+            actionUrl: url,
+          });
+          if (!result.success) {
+            throw new Error(result.error || "Failed to send email verification link");
+          }
+        },
       },
 
       socialProviders: {

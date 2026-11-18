@@ -366,7 +366,7 @@ export const UserRepository = {
       const rows = await database
         .select()
         .from(schema.users)
-        .where(eq(schema.users.email, cleanEmail))
+        .where(sql`lower(trim(${schema.users.email})) = ${cleanEmail}`)
         .limit(1);
       return rows[0] || null;
     } catch (err) {

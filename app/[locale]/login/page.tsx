@@ -16,8 +16,6 @@ import {
   Sparkles,
   ShieldCheck,
   Info,
-  KeyRound,
-  RotateCcw
 } from "lucide-react";
 import { authClient, signIn, signUp } from "@/lib/auth/authClient";
 import { useChatStore } from "@/store/chatStore";
@@ -48,6 +46,14 @@ export default function LoginPage() {
       if (isLoggedOutParam || isLoggedOutSession) {
         removeAuthCookie();
         useChatStore.getState().clearAuth();
+        return;
+      }
+
+      if (
+        searchParams.has("token") ||
+        searchParams.get("mode") === "reset" ||
+        searchParams.get("error") === "INVALID_TOKEN"
+      ) {
         return;
       }
 
@@ -103,36 +109,45 @@ export default function LoginPage() {
   }, []);
 
   // State
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authMode, setAuthMode] = useState<"login" | "register" | "forgot" | "reset">("login");
 
   // Email & Password
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetToken, setResetToken] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-
-  // OTP Verification Step State
-  const [isOtpStep, setIsOtpStep] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-  const [otpCountdown, setOtpCountdown] = useState(0);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-
-  // Countdown timer effect
-  useEffect(() => {
-    if (otpCountdown > 0) {
-      const interval = setInterval(() => {
-        setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [otpCountdown]);
 
   // UI & Animation state
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const token = searchParams.get("token");
+    if (token) {
+      setResetToken(token);
+      setAuthMode("reset");
+      return;
+    }
+    if (searchParams.get("error") === "INVALID_TOKEN") {
+      setAuthMode("forgot");
+      setInfoMsg(
+        isRtl
+          ? "رابط إعادة التعيين غير صالح أو انتهت صلاحيته. اطلب رابطاً جديداً."
+          : "This reset link is invalid or expired. Request a new one."
+      );
+    } else if (searchParams.get("verified") === "true") {
+      setInfoMsg(
+        isRtl
+          ? "تم تأكيد بريدك الإلكتروني. يمكنك الآن تسجيل الدخول."
+          : "Your email is verified. You can now sign in."
+      );
+    }
+  }, [isRtl]);
 
   // Fish interactive states
   const [isAttacking, setIsAttacking] = useState(false);
@@ -312,18 +327,18 @@ export default function LoginPage() {
     }
   };
 
-  // 3. Email + Password Sign In / Register Flow with Mandatory OTP Verification
+  // 3. Email and password authentication
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || isLoading || isSendingOtp) return;
+    if (!email.trim() || isLoading || authMode === "reset") return;
 
-    if (typeof window !== "undefined") {
+    if (authMode !== "forgot" && typeof window !== "undefined") {
       try {
         sessionStorage.removeItem("souftools_just_logged_out");
       } catch {}
     }
 
-    if (!password.trim()) {
+    if (authMode !== "forgot" && !password) {
       triggerAttack(
         isRtl
           ? "يرجى إدخال كلمة المرور للمتابعة."
@@ -342,21 +357,38 @@ export default function LoginPage() {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanPassword = password.trim();
 
     setIsLoading(true);
     setErrorMsg(null);
     setInfoMsg(null);
 
     try {
-      if (authMode === "login") {
+      if (authMode === "forgot") {
+        const response = await fetch("/api/auth/request-password-reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: cleanEmail,
+            redirectTo: `${window.location.origin}/${locale}/login?mode=reset`,
+          }),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.message || data.error || "Password reset request failed");
+        }
+        setInfoMsg(
+          isRtl
+            ? "إذا كان البريد مسجلاً، فستصلك رسالة تحتوي رابط إعادة تعيين صالحاً لمدة ساعة."
+            : "If the email is registered, a password reset link valid for one hour will arrive shortly."
+        );
+      } else if (authMode === "login") {
         // 1. Check if user is attempting Admin Master Key Login
         if (isUserAdmin(cleanEmail)) {
           try {
             const adminRes = await fetch("/api/v1/auth/admin-login", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email: cleanEmail, password: cleanPassword }),
+              body: JSON.stringify({ email: cleanEmail, password }),
             });
             if (adminRes.ok) {
               const adminData = await adminRes.json();
@@ -382,14 +414,14 @@ export default function LoginPage() {
         // 2. Standard Better Auth sign-in
         const res = await signIn.email({
           email: cleanEmail,
-          password: cleanPassword,
+          password,
         });
 
         if (res.error) {
           triggerAttack(
             isRtl
-              ? "البريد الإلكتروني أو كلمة المرور غير صحيحة."
-              : "Invalid email or password."
+              ? "تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور، وإذا كان الحساب جديداً فتأكد من تأكيد البريد أولاً."
+              : "Could not sign in. Check your email and password; new accounts must verify their email first."
           );
         } else if (res.data?.user) {
           const serverSession = await ensureServerSession();
@@ -413,184 +445,84 @@ export default function LoginPage() {
           );
         }
       } else {
-        // REGISTRATION MODE: Mandatory OTP Verification step to eliminate unverified signups
-        setIsSendingOtp(true);
-        const otpRes = await fetch("/api/auth/verify-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "send_otp",
-            email: cleanEmail,
-            userName: name.trim() || cleanEmail.split("@")[0],
-            type: "verification",
-          }),
+        const res = await signUp.email({
+          email: cleanEmail,
+          password,
+          name: name.trim() || cleanEmail.split("@")[0],
+          callbackURL: `${window.location.origin}/${locale}/login?verified=true`,
         });
-
-        const otpData = await otpRes.json().catch(() => ({}));
-
-        if (otpRes.ok && (otpData.success || otpData.status === "success")) {
-          setIsOtpStep(true);
-          setOtpCountdown(60);
-          setInfoMsg(
+        if (res.error) {
+          triggerAttack(
             isRtl
-              ? `تم إرسال رمز تأكيد سري مكون من 6 أرقام إلى بريدك (${cleanEmail}). أدخل الرمز أدناه لتفعيل حسابك.`
-              : `A 6-digit verification code was sent to ${cleanEmail}. Enter it below to activate your account.`
+              ? "تعذر إكمال التسجيل. تحقق من كلمة المرور وإعدادات البريد الإلكتروني ثم أعد المحاولة."
+              : "Could not complete sign-up. Check the password and email delivery configuration, then try again."
           );
         } else {
-          // If sending email fails, still require OTP if generated, otherwise show friendly guidance
-          if (otpData.error) {
-            triggerAttack(otpData.error);
-          } else {
-            setIsOtpStep(true);
-            setOtpCountdown(60);
-            setInfoMsg(
-              isRtl
-                ? `تم توليد رمز التحقق لبريدك (${cleanEmail}). أدخل الرمز لتأكيد الحساب.`
-                : `Verification code generated for ${cleanEmail}. Enter it below.`
-            );
-          }
+          setAuthMode("login");
+          setPassword("");
+          setInfoMsg(
+            isRtl
+              ? "إذا كان البريد مؤهلاً للتسجيل، فستصلك رسالة تأكيد. افتح الرابط ثم سجّل الدخول."
+              : "If this email can be registered, a verification link will arrive. Open it, then sign in."
+          );
         }
       }
     } catch (err: any) {
       console.error("Email auth error:", err);
       triggerAttack(
         isRtl
-          ? "حدث خطأ أثناء معالجة الطلب. يرجى المحاولة لاحقاً."
-          : "An error occurred during authentication."
+          ? "حدث خطأ أثناء معالجة الطلب. تحقق من اتصالك وحاول مجدداً."
+          : "The request could not be completed. Check your connection and try again."
       );
     } finally {
       setIsLoading(false);
-      setIsSendingOtp(false);
     }
   };
 
-  // 4. Verify OTP Code and complete Account Creation
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanCode = otpCode.trim();
-
-    if (!cleanCode || cleanCode.length < 6) {
-      triggerAttack(
-        isRtl
-          ? "يرجى إدخال رمز التحقق المكون من 6 أرقام بالكامل."
-          : "Please enter the full 6-digit verification code."
-      );
+    if (!resetToken || isLoading) return;
+    if (password.length < 6) {
+      triggerAttack(isRtl ? "كلمة المرور يجب أن تتكون من 6 أحرف على الأقل." : "Password must be at least 6 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      triggerAttack(isRtl ? "كلمتا المرور غير متطابقتين." : "The passwords do not match.");
       return;
     }
 
-    setIsVerifyingOtp(true);
+    setIsLoading(true);
     setErrorMsg(null);
     setInfoMsg(null);
-
     try {
-      // Step 1: Verify OTP code with Server
-      const verifyRes = await fetch("/api/auth/verify-email", {
+      const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "verify_otp",
-          email: cleanEmail,
-          code: cleanCode,
-        }),
+        body: JSON.stringify({ token: resetToken, newPassword: password }),
       });
-
-      const verifyData = await verifyRes.json().catch(() => ({}));
-
-      if (!verifyRes.ok || !verifyData.success) {
-        triggerAttack(
-          verifyData.error ||
-            (isRtl ? "رمز التحقق غير صحيح أو انتهت صلاحيته." : "Invalid or expired verification code.")
-        );
-        return;
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || data.error || "Password reset failed");
       }
-
-      // Step 2: Now that email ownership is verified, create account in PostgreSQL / Better Auth
-      const res = await signUp.email({
-        email: cleanEmail,
-        password: password,
-        name: name.trim() || cleanEmail.split("@")[0],
-      });
-
-      if (res.error) {
-        const rawErr = res.error.message || "";
-        if (rawErr.toLowerCase().includes("user already exists") || rawErr.toLowerCase().includes("already registered")) {
-          // Attempt instant login
-          const loginRes = await signIn.email({
-            email: cleanEmail,
-            password: password,
-          });
-          if (loginRes.data?.user) {
-            // Cleanly consume the OTP code
-            fetch("/api/auth/verify-email", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "consume_otp", email: cleanEmail }),
-            }).catch(() => {});
-            triggerSuccess(loginRes.data.user.email, loginRes.data.user.id);
-            return;
-          }
-        }
-        triggerAttack(rawErr || (isRtl ? "فشل إنشاء الحساب." : "Failed to create account."));
-      } else if (res.data?.user) {
-        // Cleanly consume the OTP code
-        fetch("/api/auth/verify-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "consume_otp", email: cleanEmail }),
-        }).catch(() => {});
-        triggerSuccess(res.data.user.email, res.data.user.id);
-      } else {
-        fetch("/api/auth/verify-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "consume_otp", email: cleanEmail }),
-        }).catch(() => {});
-        triggerSuccess(cleanEmail, `usr_${cleanEmail.split("@")[0]}`);
-      }
-    } catch (err: any) {
-      console.error("OTP verification error:", err);
+      setAuthMode("login");
+      setResetToken(null);
+      setPassword("");
+      setConfirmPassword("");
+      window.history.replaceState(null, "", `/${locale}/login`);
+      setInfoMsg(
+        isRtl
+          ? "تم تغيير كلمة المرور. يمكنك الآن تسجيل الدخول."
+          : "Your password has been changed. You can now sign in."
+      );
+    } catch (err) {
+      console.error("Password reset error:", err);
       triggerAttack(
-        isRtl ? "حدث خطأ أثناء تأكيد الرمز." : "Error verifying code."
+        isRtl
+          ? "تعذر تغيير كلمة المرور. قد يكون الرابط منتهياً أو غير صالح؛ اطلب رابطاً جديداً."
+          : "Could not change the password. The link may be invalid or expired; request a new one."
       );
     } finally {
-      setIsVerifyingOtp(false);
-    }
-  };
-
-  // Resend OTP
-  const handleResendOtp = async () => {
-    if (otpCountdown > 0 || isSendingOtp) return;
-    const cleanEmail = email.trim().toLowerCase();
-    setIsSendingOtp(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await fetch("/api/auth/verify-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "send_otp",
-          email: cleanEmail,
-          userName: name.trim() || cleanEmail.split("@")[0],
-          type: "verification",
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && (data.success || data.status === "success")) {
-        setOtpCountdown(60);
-        setInfoMsg(
-          isRtl
-            ? "تمت إعادة إرسال رمز التحقق إلى بريدك الإلكتروني بنجاح."
-            : "Verification code resent successfully to your email."
-        );
-      } else {
-        triggerAttack(data.error || (isRtl ? "فشل إعادة الإرسال." : "Failed to resend code."));
-      }
-    } catch {
-      triggerAttack(isRtl ? "فشل الاتصال بالسيرفر لإعادة إرسال الرمز." : "Failed to resend code.");
-    } finally {
-      setIsSendingOtp(false);
+      setIsLoading(false);
     }
   };
 
@@ -628,7 +560,7 @@ export default function LoginPage() {
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#111a1a]/80 border border-[#00d4aa]/20 text-[11px] text-[#4a7070]">
             <ShieldCheck className="w-3.5 h-3.5 text-[#00d4aa]" />
-            <span>Better Auth + PostgreSQL</span>
+            <span>Better Auth + Turso</span>
           </div>
           <LanguageSwitcher locale={locale} />
         </div>
@@ -667,9 +599,17 @@ export default function LoginPage() {
                 ? isRtl
                   ? "تسجيل الدخول إلى حسابك الذكي"
                   : "Sign in to your smart account"
+                : authMode === "register"
+                ? isRtl
+                  ? "إنشاء حساب جديد في منصة SoufTools"
+                  : "Create your SoufTools account"
+                : authMode === "forgot"
+                ? isRtl
+                  ? "إعادة تعيين كلمة المرور"
+                  : "Reset your password"
                 : isRtl
-                ? "إنشاء حساب جديد في منصة SoufTools"
-                : "Create your SoufTools account"}
+                ? "اختر كلمة مرور جديدة"
+                : "Choose a new password"}
             </p>
           </div>
 
@@ -764,99 +704,32 @@ export default function LoginPage() {
             )}
           </AnimatePresence>
 
-          {/* OTP Verification Form or Standard Auth Form */}
-          {isOtpStep ? (
-            <motion.form
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              onSubmit={handleVerifyOtp}
-              className="space-y-4"
-            >
-              <div className="p-3.5 rounded-2xl bg-[#00d4aa]/10 border border-[#00d4aa]/30 text-center">
-                <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-[#00d4aa]/20 border border-[#00d4aa]/40 flex items-center justify-center text-[#00f5c4]">
-                  <KeyRound className="w-5 h-5" />
+          <form
+            onSubmit={authMode === "reset" ? handleResetPassword : handleEmailAuth}
+            className="space-y-3"
+          >
+              {authMode !== "reset" && (
+                <div>
+                  <label className="block text-xs text-[#4a7070] mb-1 font-medium">
+                    {isRtl ? "البريد الإلكتروني" : "Email address"}
+                  </label>
+                  <div className="relative">
+                    <input
+                      ref={emailInputRef}
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onFocus={handleInputFocus}
+                      onBlur={handleInputBlur}
+                      placeholder="name@example.com"
+                      className="w-full px-3.5 py-2.5 ps-9 rounded-xl bg-[#0a0f0f]/80 border border-[#00d4aa]/25 focus:border-[#00d4aa] focus:ring-1 focus:ring-[#00d4aa] text-[#e8f5f5] text-xs sm:text-sm placeholder-[#4a7070]/50 outline-none transition-all"
+                    />
+                    <Mail className={`w-4 h-4 text-[#4a7070] absolute top-1/2 -translate-y-1/2 ${isRtl ? "right-3" : "left-3"}`} />
+                  </div>
                 </div>
-                <h3 className="text-sm font-semibold text-[#e8f5f5] mb-1">
-                  {isRtl ? "تأكيد وتوثيق الحساب" : "Verify Your Email"}
-                </h3>
-                <p className="text-xs text-[#88b0b0]">
-                  {isRtl
-                    ? "أدخل رمز التحقق (OTP) المكون من 6 أرقام المرسل إلى:"
-                    : "Enter the 6-digit verification code sent to:"}
-                </p>
-                <div className="text-xs font-mono font-bold text-[#00f5c4] mt-0.5 break-all">
-                  {email}
-                </div>
-              </div>
+              )}
 
-              <div>
-                <label className="block text-xs text-[#4a7070] mb-1.5 font-medium text-center">
-                  {isRtl ? "رمز التحقق السري (6 أرقام)" : "6-Digit Security Code"}
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  required
-                  autoFocus
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="------"
-                  className="w-full text-center text-2xl font-mono tracking-[0.4em] py-3 rounded-xl bg-[#0a0f0f]/90 border border-[#00d4aa]/40 focus:border-[#00d4aa] focus:ring-2 focus:ring-[#00d4aa]/30 text-[#00f5c4] placeholder-[#4a7070]/40 outline-none transition-all font-bold"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isVerifyingOtp || otpCode.length < 6}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#00d4aa] to-[#00f5c4] hover:from-[#00b894] hover:to-[#00d4aa] text-[#0a0f0f] text-xs sm:text-sm font-bold transition-all shadow-[0_0_25px_rgba(0,212,170,0.35)] active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                {isVerifyingOtp ? (
-                  <div className="w-4 h-4 border-2 border-[#0a0f0f] border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>{isRtl ? "تأكيد وتفعيل الحساب" : "Verify & Complete Signup"}</span>
-                  </>
-                )}
-              </button>
-
-              <div className="flex items-center justify-between pt-2 border-t border-[#00d4aa]/15 text-xs text-[#4a7070]">
-                <button
-                  type="button"
-                  onClick={handleResendOtp}
-                  disabled={otpCountdown > 0 || isSendingOtp}
-                  className="hover:text-[#00d4aa] transition-colors flex items-center gap-1 font-medium disabled:opacity-50"
-                >
-                  <RotateCcw className={`w-3.5 h-3.5 ${isSendingOtp ? "animate-spin" : ""}`} />
-                  <span>
-                    {otpCountdown > 0
-                      ? isRtl
-                        ? `إعادة الإرسال بعد (${otpCountdown}s)`
-                        : `Resend in (${otpCountdown}s)`
-                      : isRtl
-                      ? "إعادة إرسال الرمز"
-                      : "Resend Code"}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOtpStep(false);
-                    setOtpCode("");
-                    setErrorMsg(null);
-                  }}
-                  className="hover:text-[#00d4aa] transition-colors underline underline-offset-2 font-medium"
-                >
-                  {isRtl ? "تعديل البريد" : "Change Email"}
-                </button>
-              </div>
-            </motion.form>
-          ) : (
-            <form onSubmit={handleEmailAuth} className="space-y-3">
               {authMode === "register" && (
                 <div>
                   <label className="block text-xs text-[#4a7070] mb-1 font-medium">
@@ -872,30 +745,13 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <div>
-                <label className="block text-xs text-[#4a7070] mb-1 font-medium">
-                  {isRtl ? "البريد الإلكتروني" : "Email address"}
-                </label>
-                <div className="relative">
-                  <input
-                    ref={emailInputRef}
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onFocus={handleInputFocus}
-                    onBlur={handleInputBlur}
-                    placeholder="name@example.com"
-                    className="w-full px-3.5 py-2.5 ps-9 rounded-xl bg-[#0a0f0f]/80 border border-[#00d4aa]/25 focus:border-[#00d4aa] focus:ring-1 focus:ring-[#00d4aa] text-[#e8f5f5] text-xs sm:text-sm placeholder-[#4a7070]/50 outline-none transition-all"
-                  />
-                  <Mail className={`w-4 h-4 text-[#4a7070] absolute top-1/2 -translate-y-1/2 ${isRtl ? "right-3" : "left-3"}`} />
-                </div>
-              </div>
-
-              <div>
+              {authMode !== "forgot" && (
+                <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="block text-xs text-[#4a7070] font-medium">
-                    {isRtl ? "كلمة المرور" : "Password"}
+                    {authMode === "reset"
+                      ? isRtl ? "كلمة المرور الجديدة" : "New password"
+                      : isRtl ? "كلمة المرور" : "Password"}
                   </label>
                 </div>
                 <div className="relative">
@@ -904,6 +760,8 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
                     onFocus={(e) => {
                       setIsPasswordFocused(true);
                       handleInputFocus(e);
@@ -924,36 +782,67 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-              </div>
+                </div>
+              )}
+
+              {authMode === "reset" && (
+                <div>
+                  <label className="block text-xs text-[#4a7070] mb-1 font-medium">
+                    {isRtl ? "تأكيد كلمة المرور الجديدة" : "Confirm new password"}
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#0a0f0f]/80 border border-[#00d4aa]/25 focus:border-[#00d4aa] focus:ring-1 focus:ring-[#00d4aa] text-[#e8f5f5] text-xs sm:text-sm outline-none transition-all"
+                  />
+                </div>
+              )}
+
+              {authMode === "login" && (
+                <div className="text-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode("forgot");
+                      setErrorMsg(null);
+                      setInfoMsg(null);
+                    }}
+                    className="text-xs text-[#00d4aa] hover:text-[#00f5c4] transition-colors"
+                  >
+                    {isRtl ? "نسيت كلمة المرور؟" : "Forgot password?"}
+                  </button>
+                </div>
+              )}
 
               <button
                 type="submit"
-                disabled={isLoading || isSendingOtp}
+                disabled={isLoading}
                 className="w-full mt-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#00d4aa] to-[#00f5c4] hover:from-[#00b894] hover:to-[#00d4aa] text-[#0a0f0f] text-xs sm:text-sm font-semibold transition-all shadow-[0_0_20px_rgba(0,212,170,0.3)] hover:shadow-[0_0_25px_rgba(0,212,170,0.45)] active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
               >
-                {isLoading || isSendingOtp ? (
+                {isLoading ? (
                   <div className="w-4 h-4 border-2 border-[#0a0f0f] border-t-transparent rounded-full animate-spin"></div>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
                     <span>
                       {authMode === "login"
-                        ? isRtl
-                          ? "دخول للمنصة"
-                          : "Sign In"
-                        : isRtl
-                        ? "إرسال رمز التحقق ومتابعة التسجيل"
-                        : "Send Verification Code"}
+                        ? isRtl ? "دخول للمنصة" : "Sign In"
+                        : authMode === "register"
+                        ? isRtl ? "إنشاء الحساب وإرسال رابط التأكيد" : "Create account and send verification link"
+                        : authMode === "forgot"
+                        ? isRtl ? "إرسال رابط إعادة التعيين" : "Send reset link"
+                        : isRtl ? "حفظ كلمة المرور الجديدة" : "Save new password"}
                     </span>
                   </>
                 )}
               </button>
             </form>
-          )}
 
-          {/* Toggle Login / Register */}
-          {!isOtpStep && (
             <div className="mt-4 pt-3 border-t border-[#00d4aa]/15 text-center">
+              {authMode === "login" || authMode === "register" ? (
               <button
                 type="button"
                 onClick={() => {
@@ -961,6 +850,7 @@ export default function LoginPage() {
                   setErrorMsg(null);
                   setSuccessMsg(null);
                   setInfoMsg(null);
+                    setPassword("");
                 }}
                 className="text-xs text-[#4a7070] hover:text-[#00d4aa] transition-colors font-medium"
               >
@@ -972,8 +862,23 @@ export default function LoginPage() {
                   ? "لديك حساب بالفعل؟ تسجيل الدخول"
                   : "Already have an account? Sign in"}
               </button>
-            </div>
-          )}
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("login");
+                  setErrorMsg(null);
+                  setInfoMsg(null);
+                  setResetToken(null);
+                  setPassword("");
+                  setConfirmPassword("");
+                }}
+                className="text-xs text-[#4a7070] hover:text-[#00d4aa] transition-colors font-medium"
+              >
+                {isRtl ? "العودة إلى تسجيل الدخول" : "Back to sign in"}
+              </button>
+            )}
+          </div>
 
           {/* Strict Security Badge */}
           <div className="mt-4 p-2 rounded-xl bg-[#0a0f0f] border border-[#00d4aa]/20 flex items-center justify-center gap-2 text-[11px] text-[#88b0b0]">

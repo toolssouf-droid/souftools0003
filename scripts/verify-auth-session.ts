@@ -5,6 +5,35 @@ import {
   ensureServerSession,
   isServerAdminSession,
 } from "../lib/auth/serverSessionClient";
+import { validateAuthActionUrl } from "../lib/auth/emailService";
+
+function verifyAuthActionUrlOrigin(): void {
+  const originalAppUrl = process.env.APP_URL;
+  const originalBetterAuthUrl = process.env.BETTER_AUTH_URL;
+
+  try {
+    process.env.APP_URL = "https://souftools.example";
+    delete process.env.BETTER_AUTH_URL;
+
+    assert.equal(
+      validateAuthActionUrl("https://souftools.example/api/auth/verify-email?token=test"),
+      "https://souftools.example/api/auth/verify-email?token=test"
+    );
+    assert.throws(
+      () => validateAuthActionUrl("https://attacker.example/api/auth/verify-email?token=test"),
+      /configured application origin/
+    );
+    assert.throws(
+      () => validateAuthActionUrl("http://souftools.example/api/auth/verify-email?token=test"),
+      /configured application origin/
+    );
+  } finally {
+    if (originalAppUrl === undefined) delete process.env.APP_URL;
+    else process.env.APP_URL = originalAppUrl;
+    if (originalBetterAuthUrl === undefined) delete process.env.BETTER_AUTH_URL;
+    else process.env.BETTER_AUTH_URL = originalBetterAuthUrl;
+  }
+}
 
 function verifyMasterAdminPasswordRequiresConfiguration(): void {
   const originalHash = process.env.ADMIN_MASTER_PASSWORD_HASH;
@@ -96,6 +125,7 @@ async function verifyUnauthenticatedSessionDoesNotPass(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  verifyAuthActionUrlOrigin();
   verifyMasterAdminPasswordRequiresConfiguration();
   await verifySessionSynchronization();
   await verifyUnauthenticatedSessionDoesNotPass();

@@ -41,7 +41,7 @@ npm install
   - `TURSO_DATABASE_URL`: رابط Turso Cloud (`libsql://...` أو `https://...`) أو مسار محلي مثل `file:./.turso_local/souftools.db`.
   - `TURSO_AUTH_TOKEN`: مطلوب عند استخدام رابط Turso Cloud بعيد.
 - **الذكاء الاصطناعي**: `GEMINI_API_KEY` (أو `GEMINI_API_KEYS` لتوزيع الحمولة).
-- **المصادقة والتشفير والأمان**: `BETTER_AUTH_SECRET`، `BETTER_AUTH_URL`، `APP_URL`، `SESSION_SECRET`، `MASTER_ENCRYPTION_KEY` (أو `DATA_ENCRYPTION_KEY`)، `ENCRYPTION_SECRET`، `STORAGE_SIGNING_SECRET`، `ADMIN_EMAIL`، `ADMIN_MASTER_PASSWORD_HASH`، `CRON_SECRET`.
+- **المصادقة والتشفير والأمان**: `BETTER_AUTH_SECRET`، و`APP_URL` أو `BETTER_AUTH_URL` (أحدهما إلزامي في الإنتاج لتثبيت نطاق روابط التحقق وإعادة تعيين كلمة المرور)، `SESSION_SECRET`، `MASTER_ENCRYPTION_KEY` (أو `DATA_ENCRYPTION_KEY`)، `ENCRYPTION_SECRET`، `STORAGE_SIGNING_SECRET`، `ADMIN_EMAIL`، `ADMIN_MASTER_PASSWORD_HASH`، `CRON_SECRET`.
 - **اختياري (القنوات والبريد وOAuth)**: `TELEGRAM_BOT_TOKEN`، `TELEGRAM_WEBHOOK_SECRET`، `GOOGLE_CLIENT_ID`/`SECRET`، `GITHUB_CLIENT_ID`/`SECRET`، `SMTP_*` / `RESEND_API_KEY`.
 
 ### 3. الأوامر المتاحة

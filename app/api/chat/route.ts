@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runAgentRuntime } from "@/lib/agent/agentRuntime";
+import { isAgentDecisionPayload } from "@/lib/agent/agentDecisionParser";
 import { buildMemoryContext } from "@/lib/memory/contextBuilder";
 import { saveUserMemory } from "@/lib/memory/memoryService";
 import { buildAgentActivityState } from "@/lib/agent/agentActivityTypes";
@@ -219,9 +220,6 @@ export async function POST(req: NextRequest) {
             onActivityEvent: (event, state) => {
               sendEvent("activity", { event, state });
             },
-            onAgentEvent: (event, state) => {
-              sendEvent("agent_event", { event, state });
-            },
           });
 
           // Sync turn back to Telegram session if this was a Telegram-originated conversation
@@ -241,14 +239,28 @@ export async function POST(req: NextRequest) {
           }
 
           const activityState = agentResult.activityState || buildAgentActivityState(
-            agentResult.agentSteps,
+            [],
             agentResult.sources,
             agentResult.queriesUsed,
             agentResult.pagesRead,
             agentResult.status === "waiting_for_user" ? "pending" : "completed"
           );
 
-          const responseText = agentResult.text || (agentResult as any).finalAnswer || agentResult.state?.finalAnswer || "";
+          const responseTextCandidate =
+            agentResult.text || (agentResult as any).finalAnswer || agentResult.state?.finalAnswer || "";
+          const responseText = isAgentDecisionPayload(responseTextCandidate)
+            ? ""
+            : responseTextCandidate.trim();
+          if (
+            !responseText &&
+            agentResult.status !== "waiting_for_user" &&
+            agentResult.status !== "cancelled"
+          ) {
+            console.error("[Chat API] Agent completed without a usable final response.");
+            sendEvent("error", { message: "تعذر على الوكيل إنشاء إجابة نهائية صالحة. أعد المحاولة." });
+            safeClose();
+            return;
+          }
           const durationMs = Date.now() - startTime;
           const estimatedTokens = estimateTokens(finalPrompt) + estimateTokens(responseText);
 
@@ -289,19 +301,11 @@ export async function POST(req: NextRequest) {
             webSearchUsed: agentResult.sources.length > 0,
             sources: agentResult.sources,
             searchCount: agentResult.sources.length,
-            agentSteps: agentResult.agentSteps,
-            reasoningSteps: agentResult.reasoningSteps || agentResult.agentSteps,
-            reflectionSteps: agentResult.reflectionSteps || [],
-            hypotheses: agentResult.hypotheses || [],
-            confidenceScore: agentResult.confidenceScore,
             reasoningMode: activeTools?.includes("deep_thinking")
               ? "deep_thinking"
               : activeTools?.includes("deep_analysis")
               ? "deep_analysis"
-              : (agentResult.reasoningSteps && agentResult.reasoningSteps.length > 1) || (agentResult.agentSteps && agentResult.agentSteps.length > 1)
-              ? "deep_thinking"
               : undefined,
-            activities: agentResult.activities || activityState.activities || [],
             suggestions: agentResult.suggestions || [],
             questionTitle: agentResult.questionTitle,
             queriesUsed: agentResult.queriesUsed,
@@ -311,7 +315,6 @@ export async function POST(req: NextRequest) {
             memoryUsed: retrievedMemories.length > 0,
             candidateNewMemory,
             widgetData: agentResult.widgetData || null,
-            agentState: agentResult.state,
             deductCredits: true,
           });
           safeClose();

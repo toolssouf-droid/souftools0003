@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
         message: `تم إرسال رسالة تجريبية بنجاح إلى (${emailToTest})!`,
         engineUsed: result.engineUsed,
         messageId: result.messageId,
-        testCode,
       });
     } else {
       return NextResponse.json(

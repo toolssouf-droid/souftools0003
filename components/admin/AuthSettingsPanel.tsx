@@ -163,14 +163,11 @@ export const AuthSettingsPanel: React.FC = () => {
       // Save first before testing so the latest inputs take effect
       await handleSave();
 
-      const res = await fetch("/api/auth/verify-email", {
+      const res = await fetch("/api/admin/test-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "send_otp",
-          email: testEmail.trim(),
-          userName: "المسؤول (اختبار)",
-          type: "verification",
+          targetEmail: testEmail.trim(),
         }),
       });
 
@@ -178,7 +175,7 @@ export const AuthSettingsPanel: React.FC = () => {
       if (data.success) {
         setTestResult({
           success: true,
-          message: `تم إرسال رسالة الاختبار والرمز بنجاح عبر محرك (${data.engineUsed})! تحقق من صندوق البريد: ${testEmail}`,
+          message: `تم إرسال رسالة الاختبار بنجاح عبر محرك (${data.engineUsed})! تحقق من صندوق البريد: ${testEmail}`,
           engine: data.engineUsed,
         });
       } else {

@@ -13,6 +13,7 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
 // ==========================================
 // 1. Better Auth & Core Users
@@ -36,6 +37,9 @@ export const users = sqliteTable(
   },
   (table) => [
     uniqueIndex("users_email_idx").on(table.email),
+    uniqueIndex("users_email_normalized_idx")
+      .on(sql`lower(trim(${table.email}))`)
+      .where(sql`${table.email} = lower(trim(${table.email}))`),
     index("users_role_idx").on(table.role),
   ]
 );

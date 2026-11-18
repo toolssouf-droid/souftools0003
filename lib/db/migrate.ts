@@ -106,6 +106,9 @@ export const MIGRATION_STATEMENTS: string[] = [
     updated_at INTEGER NOT NULL DEFAULT ${NOW_MS_EXPR}
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "users_email_idx" ON "user" ("email")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "users_email_normalized_idx"
+    ON "user" (lower(trim("email")))
+    WHERE "email" = lower(trim("email"))`,
   `CREATE INDEX IF NOT EXISTS "users_role_idx" ON "user" ("role")`,
 
   `CREATE TABLE IF NOT EXISTS "session" (
