@@ -100,6 +100,7 @@ class TelegramManager {
   ];
 
   private isPolling = false;
+  private pollingBackoffMs = 2000;
   private lastUpdateId = 0;
   private pollingAbortController: AbortController | null = null;
   // In-memory conversation context per chat (rolling last 12 messages)
@@ -653,26 +654,6 @@ class TelegramManager {
     pairedUser?: TelegramPairedUser | null
   ): TelegramChatSession {
     const sChatId = String(chatId);
-    const isDiagnosticProbe =
-      sChatId === "admin_diagnostic_channel" ||
-      sChatId === "admin_test" ||
-      username === "admin_diagnostic";
-    if (isDiagnosticProbe) {
-      return {
-        id: `tg_${sChatId}`,
-        chatId: sChatId,
-        senderName: sender || "المسؤول (فحص تشخيصي)",
-        username: username || "admin_diagnostic",
-        title: "محادثة تشخيصية مؤقتة",
-        source: "telegram",
-        channel: "telegram",
-        isTelegram: true,
-        modelId: this.config.defaultModel || "spark",
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        messages: [],
-      };
-    }
     const sessionId = `tg_${sChatId}`;
     const now = Date.now();
 
@@ -750,7 +731,7 @@ class TelegramManager {
           createdAt: m.timestamp,
           source: "telegram",
         })),
-      }).catch(() => null)
+      }, { allowOwnershipTransfer: true }).catch(() => null)
     );
 
     // Broadcast sync event to live clients
@@ -835,7 +816,7 @@ class TelegramManager {
             createdAt: m.timestamp,
             source: m.source || "web",
           })),
-        }).catch(() => null)
+        }, { allowOwnershipTransfer: true }).catch(() => null)
       );
 
       recordSyncEvent({
@@ -1225,17 +1206,18 @@ class TelegramManager {
           if (!res.ok) {
             const errText = await res.text().catch(() => "");
             if (res.status === 409) {
-              terminalLogger.gateway("telegram", "409 Conflict: Clearing conflicting webhook and switching to long polling...", "warn");
-              try {
-                await fetch(`https://api.telegram.org/bot${currentToken}/deleteWebhook?drop_pending_updates=false`, { method: "POST" });
-              } catch {}
-              await new Promise((r) => setTimeout(r, 2000));
+                terminalLogger.gateway("telegram", "409 Conflict: another getUpdates consumer is active; backing off instead of deleting a webhook", "warn");
+                this.pollingBackoffMs = Math.min(this.pollingBackoffMs * 2, 30000);
+                await new Promise((r) => setTimeout(r, this.pollingBackoffMs));
             } else {
+                this.pollingBackoffMs = 2000;
               terminalLogger.gateway("telegram", `Polling HTTP ${res.status}: ${errText.slice(0, 80)}`, "warn");
               await new Promise((r) => setTimeout(r, 4000));
             }
             continue;
           }
+
+          this.pollingBackoffMs = 2000;
 
           const data = await res.json().catch(() => ({}));
           if (data.ok && Array.isArray(data.result) && data.result.length > 0) {

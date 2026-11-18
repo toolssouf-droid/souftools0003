@@ -84,10 +84,15 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         let isClosed = false;
+        let heartbeatInterval: NodeJS.Timeout | null = null;
 
         function safeClose() {
           if (isClosed) return;
           isClosed = true;
+          if (heartbeatInterval) {
+            clearInterval(heartbeatInterval);
+            heartbeatInterval = null;
+          }
           try {
             controller.close();
           } catch {}
@@ -107,6 +112,15 @@ export async function POST(req: NextRequest) {
             safeClose();
           });
         }
+
+        heartbeatInterval = setInterval(() => {
+          if (isClosed) return;
+          try {
+            controller.enqueue(encoder.encode(`:keepalive ${Date.now()}\n\n`));
+          } catch {
+            safeClose();
+          }
+        }, 15000);
 
         const startTime = Date.now();
         await initEfficiencyStoreFromDb();

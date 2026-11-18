@@ -34,6 +34,7 @@ const globalForBaileys = globalThis as unknown as {
   __baileysSocket?: WASocket | null;
   __baileysInitPromise?: Promise<any> | null;
   __baileysReconnectTimeout?: NodeJS.Timeout | null;
+  __baileysReconnectBackoffMs?: number;
   __botSentMessageIds?: Set<string>;
 };
 
@@ -366,6 +367,7 @@ export async function startBaileysSession(
 
         // When connection is successfully established
         if (connection === "open") {
+          globalForBaileys.__baileysReconnectBackoffMs = 3000;
           const userJid = sock.user?.id || "";
           const connectedPhone = userJid.split(":")[0] || userJid.split("@")[0] || "Connected Device";
           const formattedNumber = connectedPhone.startsWith("+") ? connectedPhone : `+${connectedPhone}`;
@@ -426,10 +428,15 @@ export async function startBaileysSession(
             statusCode === 428;
 
           if (shouldReconnect) {
+            const reconnectBackoffMs =
+              (globalForBaileys.__baileysReconnectBackoffMs || 3000);
+            globalForBaileys.__baileysReconnectBackoffMs =
+              Math.min(reconnectBackoffMs * 2, 30000);
+
             whatsappManager.addLog({
               direction: "system",
               phone: "Gateway",
-              content: `جاري إعادة محاولة الاتصال التلقائي بمقبس واتساب (${disconnectMessage})...`,
+              content: `جاري إعادة محاولة الاتصال التلقائي بمقبس واتساب (${disconnectMessage}) بعد ${Math.round(reconnectBackoffMs / 1000)} ثانية.`,
               status: "delivered",
               automated: true,
             });
@@ -438,7 +445,7 @@ export async function startBaileysSession(
               startBaileysSession(mode, phoneNumber).catch((err) => {
                 console.error("Auto-reconnect error:", err);
               });
-            }, 3000);
+            }, reconnectBackoffMs);
           } else {
             whatsappManager.updateConfig({
               connectionStatus: "disconnected",

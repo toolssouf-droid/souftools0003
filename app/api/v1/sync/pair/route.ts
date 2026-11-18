@@ -99,7 +99,9 @@ export async function POST(req: NextRequest) {
         const guestConvs = await ConversationRepository.listByUser(currentGuestId);
         if (Array.isArray(guestConvs) && guestConvs.length > 0) {
           for (const conv of guestConvs) {
-            await ConversationRepository.saveConversation(targetUserId, conv);
+            await ConversationRepository.saveConversation(targetUserId, conv, {
+              allowOwnershipTransfer: true,
+            });
           }
         }
       } catch (migrateErr) {

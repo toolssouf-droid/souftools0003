@@ -660,7 +660,8 @@ export const ConversationRepository = {
       createdAt?: number;
       updatedAt?: number;
       messages?: any[];
-    }
+    },
+    options: { allowOwnershipTransfer?: boolean } = {}
   ) {
     const now = new Date(conv.updatedAt || Date.now());
     const createdDate = new Date(conv.createdAt || Date.now());
@@ -674,88 +675,94 @@ export const ConversationRepository = {
         });
 
         await database.transaction(async (tx) => {
-        const existing = await tx
-          .select()
-          .from(schema.conversations)
-          .where(eq(schema.conversations.id, conv.id))
-          .limit(1);
+          const existing = await tx
+            .select()
+            .from(schema.conversations)
+            .where(eq(schema.conversations.id, conv.id))
+            .limit(1);
 
-        if (existing.length > 0) {
-          if (existing[0].userId !== userId) {
-            throw new Error("Forbidden: conversation ownership mismatch");
-          }
-          await tx
-            .update(schema.conversations)
-            .set({
+          if (existing.length > 0) {
+            if (existing[0].userId !== userId) {
+              if (!options.allowOwnershipTransfer) {
+                throw new Error("Forbidden: conversation ownership mismatch");
+              }
+              await tx
+                .update(schema.conversations)
+                .set({ userId })
+                .where(eq(schema.conversations.id, conv.id));
+            }
+            await tx
+              .update(schema.conversations)
+              .set({
+                title: conv.title,
+                modelId: conv.modelId || "soufai-spark",
+                version: (existing[0].version || 1) + 1,
+                updatedAt: now,
+              })
+              .where(eq(schema.conversations.id, conv.id));
+          } else {
+            await tx.insert(schema.conversations).values({
+              id: conv.id,
+              userId,
               title: conv.title,
               modelId: conv.modelId || "soufai-spark",
-              version: (existing[0].version || 1) + 1,
+              createdAt: createdDate,
               updatedAt: now,
-            })
-            .where(eq(schema.conversations.id, conv.id));
-        } else {
-          await tx.insert(schema.conversations).values({
-            id: conv.id,
-            userId,
-            title: conv.title,
-            modelId: conv.modelId || "soufai-spark",
-            createdAt: createdDate,
-            updatedAt: now,
-          });
-        }
-
-        if (conv.messages && Array.isArray(conv.messages)) {
-          await tx.delete(schema.messages).where(eq(schema.messages.conversationId, conv.id));
-          if (conv.messages.length > 0) {
-            const uniqueMap = new Map<string, typeof schema.messages.$inferInsert>();
-            conv.messages.forEach((m: any, idx: number) => {
-              const role = m.role || (m.sender === "user" ? "user" : "model");
-              const sender = m.sender || (role === "user" ? "user" : "assistant");
-              const ts = new Date(m.timestamp || m.createdAt || Date.now());
-              const msgId = m.id || `${conv.id}_msg_${idx}_${Date.now()}`;
-              const metadata = {
-                ...collectMessageMetadata(m),
-                ...(Array.isArray(m.attachments) && m.attachments.length > 0 ? { attachments: m.attachments } : {}),
-                ...(Array.isArray(m.agentSteps) && m.agentSteps.length > 0 ? { agentSteps: m.agentSteps } : {}),
-                ...(m.modelUsed ? { modelUsed: m.modelUsed } : {}),
-                ...(m.status ? { status: m.status } : {}),
-                ...(m.error ? { error: m.error } : {}),
-              };
-              uniqueMap.set(msgId, {
-                id: msgId,
-                conversationId: conv.id,
-                sender,
-                content: m.content || "",
-                reasoning: m.reasoning || null,
-                sources: Array.isArray(m.sources) ? m.sources : [],
-                toolCalls: Array.isArray(m.toolCalls) ? m.toolCalls : [],
-                metadata,
-                createdAt: ts,
-                updatedAt: ts,
-              });
             });
+          }
 
-            const msgRows = Array.from(uniqueMap.values());
-            for (const batch of chunkArray(msgRows, 50)) {
-              await tx
-                .insert(schema.messages)
-                .values(batch)
-                .onConflictDoUpdate({
-                  target: schema.messages.id,
-                  set: {
-                    content: sql`excluded.content`,
-                    reasoning: sql`excluded.reasoning`,
-                    sources: sql`excluded.sources`,
-                    toolCalls: sql`excluded.tool_calls`,
-                    metadata: sql`excluded.metadata`,
-                    updatedAt: sql`excluded.updated_at`,
-                  },
+          if (conv.messages && Array.isArray(conv.messages)) {
+            await tx.delete(schema.messages).where(eq(schema.messages.conversationId, conv.id));
+            if (conv.messages.length > 0) {
+              const uniqueMap = new Map<string, typeof schema.messages.$inferInsert>();
+              conv.messages.forEach((m: any, idx: number) => {
+                const role = m.role || (m.sender === "user" ? "user" : "model");
+                const sender = m.sender || (role === "user" ? "user" : "assistant");
+                const ts = new Date(m.timestamp || m.createdAt || Date.now());
+                const metadata = {
+                  ...collectMessageMetadata(m),
+                  ...(Array.isArray(m.attachments) && m.attachments.length > 0 ? { attachments: m.attachments } : {}),
+                  ...(Array.isArray(m.agentSteps) && m.agentSteps.length > 0 ? { agentSteps: m.agentSteps } : {}),
+                  ...(m.modelUsed ? { modelUsed: m.modelUsed } : {}),
+                  ...(m.status ? { status: m.status } : {}),
+                  ...(m.error ? { error: m.error } : {}),
+                };
+                const msgId = m.id || `${conv.id}_msg_${idx}_${Date.now()}`;
+                uniqueMap.set(msgId, {
+                  id: msgId,
+                  conversationId: conv.id,
+                  sender,
+                  content: m.content || "",
+                  reasoning: m.reasoning || null,
+                  sources: Array.isArray(m.sources) ? m.sources : [],
+                  toolCalls: Array.isArray(m.toolCalls) ? m.toolCalls : [],
+                  metadata,
+                  createdAt: ts,
+                  updatedAt: ts,
                 });
+              });
+
+              const msgRows = Array.from(uniqueMap.values());
+              for (const batch of chunkArray(msgRows, 50)) {
+                await tx
+                  .insert(schema.messages)
+                  .values(batch)
+                  .onConflictDoUpdate({
+                    target: schema.messages.id,
+                    set: {
+                      content: sql`excluded.content`,
+                      reasoning: sql`excluded.reasoning`,
+                      sources: sql`excluded.sources`,
+                      toolCalls: sql`excluded.tool_calls`,
+                      metadata: sql`excluded.metadata`,
+                      updatedAt: sql`excluded.updated_at`,
+                    },
+                  });
+              }
             }
           }
-        }
         });
-      }, { maxAttempts: 5, baseDelayMs: 200, label: "saveConversation" });
+      });
     } catch (err) {
       console.error("[Turso ConversationRepository.saveConversation] error:", err);
       throw err;

@@ -251,25 +251,11 @@ export function getOriginFromHeaders(headers: Headers): string | undefined {
   const host = headers.get("x-forwarded-host") || headers.get("host");
   if (!host) return undefined;
   const cleanHost = host.split(",")[0].trim();
-  const canonicalHost = "souftools0003.enzonic.dev";
-  let normalizedHost = cleanHost;
-  try {
-    const cleanHostname = new URL(`http://${cleanHost}`).hostname.toLowerCase();
-    if (
-      cleanHostname !== canonicalHost &&
-      (cleanHostname === "souftools0003-4285a4de.enzonic.dev" ||
-        cleanHostname.startsWith("souftools0003-"))
-    ) {
-      normalizedHost = canonicalHost;
-    }
-  } catch {
-    return undefined;
-  }
   const protoHeader = headers.get("x-forwarded-proto");
   const forwardedProto = protoHeader?.split(",")[0].trim().toLowerCase();
   let hostname: string;
   try {
-    hostname = new URL(`http://${normalizedHost}`).hostname.toLowerCase();
+    hostname = new URL(`http://${cleanHost}`).hostname.toLowerCase();
   } catch {
     return undefined;
   }
@@ -281,7 +267,7 @@ export function getOriginFromHeaders(headers: Headers): string | undefined {
       : isLocalHost
       ? "http"
       : "https";
-  return `${proto}://${normalizedHost}`;
+  return `${proto}://${cleanHost}`;
 }
 
 function isLocalHostname(hostname: string): boolean {
