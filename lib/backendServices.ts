@@ -57,6 +57,26 @@ export async function saveSessionToCloud(userId: string, session: ChatSession): 
   }
 }
 
+export async function saveDefaultModelPreference(modelId: string): Promise<void> {
+  const preferencesResponse = await fetch("/api/v1/preferences", {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ defaultModelId: modelId }),
+  });
+  if (!preferencesResponse.ok) {
+    throw new Error(`Failed to save model preference (${preferencesResponse.status})`);
+  }
+
+  const syncResponse = await fetch("/api/user/sync", {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ settings: { currentModel: modelId } }),
+  });
+  if (!syncResponse.ok) {
+    throw new Error(`Failed to sync model preference (${syncResponse.status})`);
+  }
+}
+
 export async function deleteSessionFromCloud(userId: string, sessionId: string): Promise<void> {
   const activeUserId = userId || "default_user";
   if (!sessionId) return;

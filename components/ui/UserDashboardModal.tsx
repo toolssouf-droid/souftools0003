@@ -35,6 +35,7 @@ import {
   Smartphone
 } from "lucide-react";
 import { useChatStore, SoufAIModelId } from "@/store/chatStore";
+import { saveDefaultModelPreference } from "@/lib/backendServices";
 import { performCompleteSignOut } from "@/lib/auth/unifiedAuth";
 import { isRtlLocale } from "@/lib/i18n";
 import { removeAuthCookie } from "@/lib/authCookies";
@@ -65,14 +66,15 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
     userEmail,
     userId,
     isAdmin,
-    currentModel,
-    setCurrentModel,
+    defaultModelId,
+    setDefaultModel,
     clearAllSessions,
     clearAllMemory,
     sessions,
   } = useChatStore();
 
   const [activeTab, setActiveTab] = useState<"memory" | "roadmap" | "settings">(initialTab);
+  const [modelPreferenceError, setModelPreferenceError] = useState<string | null>(null);
   
   // Memory State
   const [memoryEnabled, setMemoryEnabled] = useState(true);
@@ -460,8 +462,20 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
                     {isRtl ? "اختر النموذج الذي يبدأ العمل تلقائياً في كل جلسة جديدة." : "Select the default engine used when starting new conversations."}
                   </p>
                   <select
-                    value={currentModel}
-                    onChange={(e) => setCurrentModel(e.target.value as SoufAIModelId)}
+                    value={defaultModelId}
+                    onChange={(e) => {
+                      const modelId = e.target.value as SoufAIModelId;
+                      setDefaultModel(modelId);
+                      setModelPreferenceError(null);
+                      void saveDefaultModelPreference(modelId).catch((error) => {
+                        console.error("Failed to persist dashboard model preference:", error);
+                        setModelPreferenceError(
+                          isRtl
+                            ? "تعذر حفظ النموذج الافتراضي. تحقق من اتصالك ثم أعد المحاولة."
+                            : "Could not save the default model. Check your connection and try again."
+                        );
+                      });
+                    }}
                     className="w-full bg-[#0a0f0f] border border-[#1e2e2e] focus:border-[#00d4aa] rounded-xl px-3 py-2 text-xs text-[#e8f5f5] focus:outline-none transition-colors"
                   >
                     <option value="spark">⚡ SoufAI Spark — Ultra Fast & Lightweight</option>
@@ -471,6 +485,11 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
                     <option value="ultra">SoufAI Ultra — Flagship Architecture</option>
                     <option value="vision">SoufAI Vision — Multimodal & Image QA</option>
                   </select>
+                  {modelPreferenceError && (
+                    <p role="alert" className="text-xs text-red-300">
+                      {modelPreferenceError}
+                    </p>
+                  )}
                 </div>
 
                 {/* Speech Synthesis (TTS) Toggle */}

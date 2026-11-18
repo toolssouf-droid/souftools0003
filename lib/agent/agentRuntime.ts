@@ -479,6 +479,7 @@ export async function runAgentRuntime(options: AgentRuntimeOptions): Promise<Age
 قدم إجابة مباشرة وشاملة لسؤال المستخدم دون أي رسائل نظام أو استدعاءات JSON غير ضرورية.`,
           temperature: 0.7,
           signal: abortSignal,
+          cacheResponse: false,
           onToken: options.onToken,
         });
 
@@ -859,6 +860,7 @@ ${jsonSchemaInstruction}${composedRuntimeSkills?.mergedInstructions ? `\n\n${com
         attachments,
         responseMimeType: "application/json",
         signal: abortSignal,
+        cacheResponse: false,
       });
 
       if (decisionResult.modelUsed) finalModelUsed = decisionResult.modelUsed;
@@ -910,6 +912,7 @@ ${jsonSchemaInstruction}${composedRuntimeSkills?.mergedInstructions ? `\n\n${com
               messages: state.conversation,
               systemInstruction: "أجب دائماً باللغة العربية بأسلوب كامل ومفيد ودقيق.",
               signal: abortSignal,
+              cacheResponse: false,
               onToken: options.onToken,
             });
             if (directAnswerResult?.text && !isInternalNoise(directAnswerResult.text)) {
@@ -1365,6 +1368,7 @@ ${jsonSchemaInstruction}${composedRuntimeSkills?.mergedInstructions ? `\n\n${com
           messages: state.conversation,
           systemInstruction: "أنت المساعد الذكي SoufAI. قدم إجابة نهائية متكاملة ومفيدة باللغة العربية الفصحى مع تنسيق Markdown أنيق دون أي رموز برمجية أو رسائل نظام داخلية.",
           signal: abortSignal,
+          cacheResponse: false,
           onToken: options.onToken,
         });
         if (finalSyn?.text && finalSyn.text.trim().length > 0) {

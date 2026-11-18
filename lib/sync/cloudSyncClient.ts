@@ -9,7 +9,7 @@
  *    PostgreSQL remains the sole durable Source of Truth.
  */
 
-import { useChatStore, ChatSession, ChatMessage } from "@/store/chatStore";
+import { useChatStore, ChatSession, ChatMessage, resolveSessionModelId } from "@/store/chatStore";
 import { getOrCreateAuthSession } from "@/lib/authCookies";
 import { cloudSyncService } from "@/lib/sync/cloudSyncService";
 
@@ -47,6 +47,7 @@ export function getDeviceId(): string {
  */
 export async function bootstrapCloudSync(): Promise<boolean> {
   if (typeof window === "undefined" || isBootstrapping) return false;
+  const modelAtStart = useChatStore.getState().currentModel;
   isBootstrapping = true;
 
   try {
@@ -99,9 +100,6 @@ export async function bootstrapCloudSync(): Promise<boolean> {
     }
 
     if (data.preferences) {
-      if (data.preferences.defaultModelId) {
-        useChatStore.getState().setCurrentModel(data.preferences.defaultModelId as any);
-      }
       if (typeof data.preferences.webSearchEnabled === "boolean") {
         useChatStore.getState().setWebSearchEnabled(data.preferences.webSearchEnabled);
       }
@@ -134,20 +132,27 @@ export async function bootstrapCloudSync(): Promise<boolean> {
         }
       }
 
-      const existingSessions = useChatStore.getState().sessions || [];
+      const currentState = useChatStore.getState();
+      const existingSessions = currentState.sessions || [];
       const sessionMap = new Map<string, ChatSession>();
       mappedSessions.forEach((s) => sessionMap.set(s.id, s));
       existingSessions.forEach((s) => {
         const serverS = sessionMap.get(s.id);
         if (!serverS) {
           sessionMap.set(s.id, s);
-        } else if (s.messages && s.messages.length > (serverS.messages?.length || 0)) {
+        } else if (
+          s.updatedAt >= serverS.updatedAt ||
+          s.messages.length > (serverS.messages?.length || 0)
+        ) {
           sessionMap.set(s.id, s);
         }
       });
       const finalSessions = Array.from(sessionMap.values()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
-      const activeId = data.activeConversationId || useChatStore.getState().activeSessionId || (finalSessions[0]?.id ?? null);
+      const activeId =
+        currentState.activeSessionId && finalSessions.some((s) => s.id === currentState.activeSessionId)
+          ? currentState.activeSessionId
+          : data.activeConversationId || finalSessions[0]?.id || null;
       const activeSess = finalSessions.find((s) => s.id === activeId) || finalSessions[0];
 
       useChatStore.setState({
@@ -155,6 +160,20 @@ export async function bootstrapCloudSync(): Promise<boolean> {
         activeSessionId: activeId,
         messages: activeSess?.messages || [],
       });
+
+      const activeModel = resolveSessionModelId(activeSess?.modelId);
+      const defaultModel = resolveSessionModelId(data.preferences?.defaultModelId);
+      if (defaultModel) useChatStore.getState().setDefaultModel(defaultModel);
+      if (useChatStore.getState().currentModel === modelAtStart) {
+        const restoredModel = activeModel || defaultModel;
+        if (restoredModel) useChatStore.getState().setCurrentModel(restoredModel);
+      }
+    } else {
+      const defaultModel = resolveSessionModelId(data.preferences?.defaultModelId);
+      if (defaultModel) useChatStore.getState().setDefaultModel(defaultModel);
+      if (useChatStore.getState().currentModel === modelAtStart && defaultModel) {
+        useChatStore.getState().setCurrentModel(defaultModel);
+      }
     }
 
     // 3. Connect real-time Server-Sent Events (SSE)

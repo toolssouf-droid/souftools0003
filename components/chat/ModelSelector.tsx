@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown, Check, Sparkles } from "lucide-react";
 import { SOUFAI_MODELS, SoufAIModelDef } from "@/lib/providers";
 import { useChatStore } from "@/store/chatStore";
+import { saveDefaultModelPreference } from "@/lib/backendServices";
 import { ModelLogo } from "@/components/ui/Logos";
 import { isRtlLocale } from "@/lib/i18n";
 import { getModelLocalizedDetails } from "@/lib/i18n/multilingualStrings";
@@ -28,6 +29,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({ locale, dropUp = f
   }>({});
 
   const [activeTiers, setActiveTiers] = useState<string[] | null>(null);
+  const [modelSaveError, setModelSaveError] = useState<string | null>(null);
 
   const { currentModel, setCurrentModel } = useChatStore();
   const isRtl = isRtlLocale(locale);
@@ -213,6 +215,14 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({ locale, dropUp = f
           }`}
         />
       </button>
+      {modelSaveError && (
+        <span
+          role="alert"
+          className="absolute end-0 top-full z-[100000] mt-1 max-w-[260px] rounded-lg border border-red-500/30 bg-[#12161f] px-2.5 py-1.5 text-[11px] text-red-300 shadow-lg"
+        >
+          {modelSaveError}
+        </span>
+      )}
 
       {mounted &&
         createPortal(
@@ -281,7 +291,17 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({ locale, dropUp = f
                           type="button"
                           onClick={() => {
                             setCurrentModel(m.id);
+                            useChatStore.getState().setDefaultModel(m.id);
+                            setModelSaveError(null);
                             setOpen(false);
+                            void saveDefaultModelPreference(m.id).catch((error) => {
+                              console.error("Failed to persist selected model preference:", error);
+                              setModelSaveError(
+                                isRtl
+                                  ? "تعذر حفظ النموذج الافتراضي. تحقق من اتصالك ثم أعد المحاولة."
+                                  : "Could not save the default model. Check your connection and try again."
+                              );
+                            });
                           }}
                           className={`w-full p-2 rounded-xl transition-all flex items-center justify-between text-start cursor-pointer group ${
                             isSelected

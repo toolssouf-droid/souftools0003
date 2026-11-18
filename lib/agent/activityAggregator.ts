@@ -462,7 +462,7 @@ export function aggregateAgentActivities(options: {
 
   // If simple query with no steps and no tools
   if (isSimpleDirectQuery(userPrompt, totalSteps, totalTools)) {
-    complexity = "none";
+    complexity = isRunning && totalSteps > 0 ? "quick" : "none";
   } else if (totalSteps <= 1 && totalTools <= 1 && fileOperationsCount === 0 && !hasBuild) {
     // Quick task (e.g. "اكتب لي دالة JavaScript" or simple calculation)
     complexity = "quick";

@@ -151,6 +151,7 @@ export interface RouterExecuteOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
   strictModelSelection?: boolean;
+  cacheResponse?: boolean;
   onToken?: (token: string) => void;
 }
 
@@ -331,8 +332,11 @@ export async function executeRoutedPrompt(options: RouterExecuteOptions): Promis
   }
 
   // --- High-Speed In-Memory Cache Check (Zero-Latency & IP Protection) ---
-  const isEligibleForCache = responseCache.isCacheable(prompt, attachments.length) && (!messages || messages.length <= 1) && !options.webSearchEnabled;
-  const cacheKey = responseCache.generateKey(modelId, prompt, options.systemInstruction, attachments.length);
+  const isEligibleForCache = options.cacheResponse !== false &&
+    responseCache.isCacheable(prompt, attachments.length) &&
+    (!messages || messages.length === 0) &&
+    !options.webSearchEnabled;
+  const cacheKey = responseCache.generateKey(modelId, fullPrompt, options.systemInstruction, attachments.length);
 
   if (isEligibleForCache) {
     const cached = responseCache.get(cacheKey);

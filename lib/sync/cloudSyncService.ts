@@ -1,4 +1,4 @@
-import { useChatStore, ChatSession } from "@/store/chatStore";
+import { useChatStore, ChatSession, resolveSessionModelId } from "@/store/chatStore";
 import { SoufAIMemory } from "@/lib/memory/types";
 import { auth } from "@/lib/firebase";
 import { getOrCreateAuthSession, getAuthCookie } from "@/lib/authCookies";
@@ -139,6 +139,7 @@ class CloudSyncService {
   public async restoreFromCloud(userId?: string, userEmail?: string): Promise<boolean> {
     if (typeof window === "undefined") return false;
 
+    const modelAtStart = useChatStore.getState().currentModel;
     const cookieData = getOrCreateAuthSession();
     const targetUserId = userId || auth.currentUser?.uid || useChatStore.getState().userId || cookieData?.userId || cookieData?.email || "default_user";
     const targetEmail = userEmail || auth.currentUser?.email || useChatStore.getState().userEmail || cookieData?.email || `${targetUserId}@souftools.app`;
@@ -168,7 +169,7 @@ class CloudSyncService {
           // Existing local sessions if newer
           (store.sessions || []).forEach((s) => {
             const cloudSess = sessionMap.get(s.id);
-            if (!cloudSess || (s.updatedAt || 0) > (cloudSess.updatedAt || 0)) {
+            if (!cloudSess || (s.updatedAt || 0) >= (cloudSess.updatedAt || 0)) {
               sessionMap.set(s.id, s);
             }
           });
@@ -189,12 +190,23 @@ class CloudSyncService {
           });
         }
 
-        // Apply saved cloud preferences if available
+        // The active conversation's model takes precedence over the new-chat default.
         if (data.settings) {
-          if (data.settings.currentModel) store.setCurrentModel(data.settings.currentModel);
           if (data.settings.webSearchEnabled !== undefined) {
             store.setWebSearchEnabled(data.settings.webSearchEnabled);
           }
+          const defaultModel = resolveSessionModelId(data.settings.currentModel);
+          if (defaultModel) store.setDefaultModel(defaultModel);
+        }
+        const latestStore = useChatStore.getState();
+        const activeModel = latestStore.sessions.find((session) => session.id === latestStore.activeSessionId)?.modelId;
+        const resolvedActiveModel = resolveSessionModelId(activeModel);
+        const resolvedDefaultModel = resolveSessionModelId(data.settings?.currentModel);
+        if (
+          latestStore.currentModel === modelAtStart
+        ) {
+          const restoredModel = resolvedActiveModel || resolvedDefaultModel;
+          if (restoredModel) latestStore.setCurrentModel(restoredModel);
         }
 
         this.lastSyncedAt = Date.now();

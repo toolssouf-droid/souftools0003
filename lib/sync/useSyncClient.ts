@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useChatStore, ChatSession, ChatMessage } from "@/store/chatStore";
+import { useChatStore, ChatSession, ChatMessage, resolveSessionModelId } from "@/store/chatStore";
 import { cloudSyncService } from "@/lib/sync/cloudSyncService";
 import { mapSyncBootstrapResponse } from "@/lib/sync/bootstrapMapper";
 
@@ -54,6 +54,7 @@ export function useSyncClient() {
    */
   const executeBootstrap = useCallback(async () => {
     try {
+      const modelAtStart = useChatStore.getState().currentModel;
       setSyncState((prev) => ({ ...prev, status: "syncing", errorMessage: null }));
       const deviceId = getClientDeviceId();
 
@@ -75,19 +76,41 @@ export function useSyncClient() {
 
       lastCursorRef.current = snapshot.cursor;
 
-      // Hydrate Zustand Store with Server Source of Truth
+      // Merge the snapshot without discarding a locally created/current conversation.
       const store = useChatStore.getState();
+      const sessionMap = new Map(snapshot.sessions.map((session) => [session.id, session]));
+      for (const localSession of store.sessions) {
+        const serverSession = sessionMap.get(localSession.id);
+        if (!serverSession || localSession.updatedAt >= serverSession.updatedAt) {
+          sessionMap.set(localSession.id, localSession);
+        }
+      }
+      const sessions = Array.from(sessionMap.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+      const activeSessionId =
+        store.activeSessionId && sessionMap.has(store.activeSessionId)
+          ? store.activeSessionId
+          : snapshot.activeSessionId && sessionMap.has(snapshot.activeSessionId)
+          ? snapshot.activeSessionId
+          : sessions[0]?.id ?? null;
+      const activeSession = sessions.find((session) => session.id === activeSessionId);
       useChatStore.setState({
-        sessions: snapshot.sessions,
-        activeSessionId: snapshot.activeSessionId,
-        messages: snapshot.messages,
+        sessions,
+        activeSessionId,
+        messages: activeSession?.messages || [],
       });
 
       // Apply server user preferences
       if (snapshot.preferences) {
         const p = snapshot.preferences;
-        if (p.defaultModelId) store.setCurrentModel(p.defaultModelId as any);
         if (p.webSearchEnabled !== undefined) store.setWebSearchEnabled(p.webSearchEnabled);
+        const defaultModel = resolveSessionModelId(p.defaultModelId);
+        if (defaultModel) store.setDefaultModel(defaultModel);
+      }
+      const activeModel = resolveSessionModelId(activeSession?.modelId);
+      const defaultModel = resolveSessionModelId(snapshot.preferences?.defaultModelId);
+      if (useChatStore.getState().currentModel === modelAtStart) {
+        const restoredModel = activeModel || defaultModel;
+        if (restoredModel) useChatStore.getState().setCurrentModel(restoredModel);
       }
 
       setSyncState({
@@ -152,6 +175,18 @@ export function useSyncClient() {
             setSyncState((prev) => ({ ...prev, status: "revoked" }));
             es.close();
             return;
+          }
+        }
+
+        if (
+          event.entityType === "preference" &&
+          event.operation === "updated" &&
+          typeof event.payload?.defaultModelId === "string"
+        ) {
+          const currentStore = useChatStore.getState();
+          currentStore.setDefaultModel(event.payload.defaultModelId);
+          if (!currentStore.activeSessionId) {
+            currentStore.setCurrentModel(event.payload.defaultModelId);
           }
         }
 

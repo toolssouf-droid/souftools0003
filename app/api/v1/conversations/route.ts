@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { requireAuth } from "@/lib/auth/serverAuth";
 import { getReadyDb, UserRepository } from "@/lib/db";
 import { conversations } from "@/lib/db/schema";
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const deviceId = req.headers.get("x-device-id");
 
-    const id = body.id || `conv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const id = typeof body.id === "string" && body.id ? body.id : `conv_${randomUUID()}`;
     const title = body.title || "محادثة جديدة";
     const modelId = body.modelId || "spark";
     const metadata = body.metadata || {};
@@ -89,32 +90,53 @@ export async function POST(req: NextRequest) {
         createdAt: now,
         updatedAt: now,
       })
+      .onConflictDoNothing({ target: conversations.id })
       .returning();
 
-    // Broadcast real-time sync event
-    await recordSyncEvent({
-      userId: user.id,
-      entityType: "conversation",
-      entityId: id,
-      operation: "created",
-      version: 1,
-      payload: {
-        id: created.id,
-        title: created.title,
-        modelId: created.modelId,
+    let conversation = created;
+    if (!conversation) {
+      const [existing] = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, id))
+        .limit(1);
+
+      if (!existing) {
+        throw new Error("Conversation insert conflicted but no existing row was found");
+      }
+      if (existing.userId !== user.id) {
+        return NextResponse.json(
+          { success: false, code: "CONVERSATION_ID_CONFLICT", message: "معرّف المحادثة مستخدم بالفعل" },
+          { status: 409 }
+        );
+      }
+
+      conversation = existing;
+    } else {
+      await recordSyncEvent({
+        userId: user.id,
+        entityType: "conversation",
+        entityId: id,
+        operation: "created",
         version: 1,
-        createdAt: toIsoDateString(created.createdAt),
-        updatedAt: toIsoDateString(created.updatedAt),
-      },
-      deviceId,
-    });
+        payload: {
+          id: conversation.id,
+          title: conversation.title,
+          modelId: conversation.modelId,
+          version: 1,
+          createdAt: toIsoDateString(conversation.createdAt),
+          updatedAt: toIsoDateString(conversation.updatedAt),
+        },
+        deviceId,
+      });
+    }
 
     return NextResponse.json({
       success: true,
       conversation: {
-        ...created,
-        createdAt: toIsoDateString(created.createdAt),
-        updatedAt: toIsoDateString(created.updatedAt),
+        ...conversation,
+        createdAt: toIsoDateString(conversation.createdAt),
+        updatedAt: toIsoDateString(conversation.updatedAt),
       },
     });
   } catch (error: any) {

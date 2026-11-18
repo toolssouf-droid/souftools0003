@@ -90,10 +90,20 @@ export interface ChatMessage {
   toolCalls?: any[];
 }
 
-export type SoufAIModelId = "spark" | "core" | "pro" | "ultra";
+export type SoufAIModelId = "spark" | "core" | "pro" | "coder" | "ultra";
+
+function createSessionId(): string {
+  return `session_${crypto.randomUUID()}`;
+}
 
 function isSoufAIModelId(modelId: string): modelId is SoufAIModelId {
-  return modelId === "spark" || modelId === "core" || modelId === "pro" || modelId === "ultra";
+  return modelId === "spark" || modelId === "core" || modelId === "pro" || modelId === "coder" || modelId === "ultra";
+}
+
+export function resolveSessionModelId(modelId?: string | null): SoufAIModelId | null {
+  if (!modelId) return null;
+  const normalized = modelId.replace(/^soufai-/, "");
+  return isSoufAIModelId(normalized) ? normalized : null;
 }
 
 export interface ChatSession {
@@ -113,6 +123,7 @@ export interface ChatSession {
 
 interface ChatStoreState {
   currentModel: SoufAIModelId;
+  defaultModelId: SoufAIModelId;
   selectedModel: string;
   webSearchEnabled: boolean;
   activeSessionId: string | null;
@@ -142,6 +153,7 @@ interface ChatStoreState {
   setIsDashboardOpen: (open: boolean) => void;
   setDashboardTab: (tab: "memory" | "roadmap" | "settings") => void;
   setCurrentModel: (model: SoufAIModelId | string) => void;
+  setDefaultModel: (model: SoufAIModelId | string) => void;
   setSelectedModel: (model: string) => void;
   setWebSearchEnabled: (enabled: boolean) => void;
   setSuggestionsConfig: (config: Partial<SoufAISuggestionsConfig>) => void;
@@ -195,6 +207,7 @@ function mergeSessionsWithLocalChanges(
 
 export const useChatStore = create<ChatStoreState>()((set, get) => ({
       currentModel: "core",
+      defaultModelId: "core",
       selectedModel: "gemini-3.7-flash",
       webSearchEnabled: false,
       activeSessionId: null,
@@ -274,6 +287,10 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
           void saveSessionToCloud(userId, sessionToSave);
         }
       },
+      setDefaultModel: (model) => {
+        const resolvedModel = resolveSessionModelId(model);
+        if (resolvedModel) set({ defaultModelId: resolvedModel });
+      },
       setSelectedModel: (model) => set({ selectedModel: model }),
       clearAllSessions: () => {
         const uid = get().userId;
@@ -325,12 +342,26 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
       setUserId: (userId) => {
         const previousUserId = get().userId;
         if (previousUserId && userId && previousUserId !== userId) {
-          set({ sessions: [], activeSessionId: null, messages: [] });
+          set({
+            currentModel: "core",
+            defaultModelId: "core",
+            selectedModel: "gemini-3.7-flash",
+            sessions: [],
+            activeSessionId: null,
+            messages: [],
+          });
         }
 
         set({ userId });
         if (!userId) {
-          set({ sessions: [], activeSessionId: null, messages: [] });
+          set({
+            currentModel: "core",
+            defaultModelId: "core",
+            selectedModel: "gemini-3.7-flash",
+            sessions: [],
+            activeSessionId: null,
+            messages: [],
+          });
           return;
         }
         if (userId) {
@@ -362,6 +393,9 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
         userId: null,
         userName: null,
         isAdmin: false,
+        currentModel: "core",
+        defaultModelId: "core",
+        selectedModel: "gemini-3.7-flash",
         sessions: [],
         activeSessionId: null,
         messages: [],
@@ -458,22 +492,25 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
       },
 
       createNewSession: () => {
-        const newId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const newId = createSessionId();
         const authData = getOrCreateAuthSession();
         const activeUid = get().userId || authData?.userId || authData?.email;
+        const defaultModelId = get().defaultModelId;
 
         const newSession: ChatSession = {
           id: newId,
           title: "محادثة جديدة",
           createdAt: Date.now(),
           updatedAt: Date.now(),
-          modelId: get().currentModel,
+          modelId: defaultModelId,
           messages: [],
         };
 
         set((state) => ({
           sessions: [newSession, ...state.sessions],
           activeSessionId: newId,
+          currentModel: defaultModelId,
+          selectedModel: defaultModelId,
           messages: [],
           userId: activeUid || state.userId,
           userEmail: authData?.email || state.userEmail,
@@ -487,7 +524,7 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
             "x-user-id": activeUid || "",
             "x-user-email": authData?.email || "",
           },
-          body: JSON.stringify({ id: newId, title: "محادثة جديدة", modelId: get().currentModel }),
+          body: JSON.stringify({ id: newId, title: "محادثة جديدة", modelId: defaultModelId }),
         }).catch(() => null);
 
         if (activeUid) {
@@ -500,7 +537,7 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
       setActiveSession: (sessionId) => {
         const session = get().sessions.find((s) => s.id === sessionId);
         if (session) {
-          const currentModel = isSoufAIModelId(session.modelId) ? session.modelId : "core";
+          const currentModel = resolveSessionModelId(session.modelId) || "core";
           set({
             activeSessionId: sessionId,
             messages: session.messages || [],
@@ -553,7 +590,7 @@ export const useChatStore = create<ChatStoreState>()((set, get) => ({
           let targetSession: ChatSession | null = null;
 
           if (!currentSessionId) {
-            currentSessionId = `session_${Date.now()}`;
+            currentSessionId = createSessionId();
             targetSession = {
               id: currentSessionId,
               title: msgData.content.slice(0, 30) || "محادثة جديدة",

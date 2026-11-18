@@ -10,8 +10,6 @@ import { telegramManager } from "@/lib/telegram/telegramManager";
 import { inspectRequestBody } from "@/lib/security/wafEngine";
 import { extractClientIP } from "@/lib/security/threatEngine";
 import {
-  checkResultCache,
-  storeResultCache,
   recordEfficiencyEvent,
   estimateTokens,
   initEfficiencyStoreFromDb,
@@ -118,66 +116,6 @@ export async function POST(req: NextRequest) {
             return;
           }
           const queryText = prompt || userResponse || "";
-
-          // AI Efficiency Result Cache Check (Instantaneous Zero-Token Answer)
-          if (
-            queryText &&
-            !userResponse &&
-            (!attachments || attachments.length === 0) &&
-            !webSearchEnabled &&
-            (!activeTools || activeTools.length === 0)
-          ) {
-            const cachedItem = checkResultCache(queryText, modelId);
-            if (cachedItem && cachedItem.text) {
-              const elapsedMs = Math.max(15, Date.now() - startTime);
-
-              // Telemetry: Record real cache hit event
-              recordEfficiencyEvent({
-                type: "cache_hit",
-                promptSummary: queryText.slice(0, 120),
-                modelUsed: cachedItem.modelUsed || modelId,
-                providerUsed: `${cachedItem.providerUsed || "SoufAI"} (Cache)`,
-                tokensEstimated: cachedItem.estimatedTokensSaved,
-                tokensSaved: cachedItem.estimatedTokensSaved,
-                latencyMs: elapsedMs,
-                toolsUsed: cachedItem.metadata?.toolsUsed || [],
-              });
-
-              // Stream tokens immediately to client
-              sendEvent("token", { delta: cachedItem.text });
-
-              const cachedActivityState = buildAgentActivityState(
-                ["⚡ استجابة فورية فائقة السرعة عبر ذاكرة التخزين المؤقت (Result Cache - 0 Tokens)"],
-                [],
-                [],
-                [],
-                "completed"
-              );
-
-              sendEvent("complete", {
-                taskId: `cache_${Date.now()}`,
-                status: "completed",
-                text: cachedItem.text,
-                finalAnswer: cachedItem.text,
-                modelUsed: cachedItem.modelUsed || modelId,
-                providerUsed: `${cachedItem.providerUsed || "SoufAI"} (Result Cache)`,
-                webSearchUsed: false,
-                sources: [],
-                searchCount: 0,
-                agentSteps: ["⚡ استرجاع الإجابة من كاش الذاكرة المؤقت الفوري (0 Tokens)"],
-                confidenceScore: 1.0,
-                activities: cachedActivityState.activities || [],
-                activityState: cachedActivityState,
-                usedMemories: [],
-                memoryUsed: false,
-                widgetData: null,
-                isCached: true,
-                deductCredits: false,
-              });
-              safeClose();
-              return;
-            }
-          }
 
           // 0. SoufAI Memory Engine Context Retrieval
           let memoryContextBlock = "";
@@ -340,28 +278,6 @@ export async function POST(req: NextRequest) {
             latencyMs: durationMs,
             toolsUsed: uniqueToolsExecuted,
           });
-
-          // Store in Result Cache for future instant reuse
-          if (
-            responseText &&
-            responseText.length > 20 &&
-            !isFromTelegram &&
-            (!attachments || attachments.length === 0) &&
-            !activeTools?.includes("media_player") &&
-            agentResult.status === "completed"
-          ) {
-            storeResultCache(
-              queryText,
-              modelId,
-              responseText,
-              agentResult.modelUsed || modelId,
-              agentResult.providerUsed || "SoufAI Real Agent Runtime",
-              {
-                sourcesCount: agentResult.sources?.length || 0,
-                toolsUsed: uniqueToolsExecuted,
-              }
-            );
-          }
 
           sendEvent("complete", {
             taskId: agentResult.taskId,

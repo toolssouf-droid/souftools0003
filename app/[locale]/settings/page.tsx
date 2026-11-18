@@ -87,8 +87,8 @@ export default function SettingsControlPanelPage({
     userEmail,
     userId,
     isAdmin,
-    currentModel,
-    setCurrentModel,
+    defaultModelId,
+    setDefaultModel,
     webSearchEnabled,
     setWebSearchEnabled,
     sessions,
@@ -124,7 +124,7 @@ export default function SettingsControlPanelPage({
   const [serverPreferences, setServerPreferences] = useState<any>({
     soundEnabled: true,
     autoScroll: true,
-    defaultModelId: currentModel || "spark",
+    defaultModelId: defaultModelId || "spark",
     theme: "dark",
   });
   const [savingPrefs, setSavingPrefs] = useState(false);
@@ -179,6 +179,9 @@ export default function SettingsControlPanelPage({
       .then((data) => {
         if (data?.preferences) {
           setServerPreferences(data.preferences);
+          if (data.preferences.defaultModelId) {
+            setDefaultModel(data.preferences.defaultModelId);
+          }
         }
       })
       .catch(() => {});
@@ -187,22 +190,37 @@ export default function SettingsControlPanelPage({
     loadServerMemories();
 
     return () => unsub();
-  }, [loadServerMemories]);
+  }, [loadServerMemories, setDefaultModel]);
 
   const handleUpdatePreferences = async (updates: Partial<typeof serverPreferences>) => {
     const newPrefs = { ...serverPreferences, ...updates };
     setServerPreferences(newPrefs);
     setSavingPrefs(true);
     try {
-      await fetch("/api/v1/preferences", {
+      const response = await fetch("/api/v1/preferences", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
       });
+      if (!response.ok) {
+        throw new Error(`Preferences save failed (${response.status})`);
+      }
+      if (updates.defaultModelId !== undefined) {
+        const syncResponse = await fetch("/api/user/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ settings: { currentModel: updates.defaultModelId } }),
+        });
+        if (!syncResponse.ok) {
+          throw new Error(`Model preference sync failed (${syncResponse.status})`);
+        }
+      }
       setSyncFeedback(isRtl ? "تم حفظ وتحديث تفضيلاتك على السيرفر مباشرة" : "Preferences saved to server directly");
       setTimeout(() => setSyncFeedback(null), 3000);
     } catch (err) {
       console.error("Preferences save error:", err);
+      setSyncFeedback(isRtl ? "تعذر حفظ التفضيلات على السيرفر" : "Failed to save preferences to the server");
+      setTimeout(() => setSyncFeedback(null), 4000);
     } finally {
       setSavingPrefs(false);
     }
@@ -585,18 +603,18 @@ export default function SettingsControlPanelPage({
                           <div
                             key={m.id}
                             onClick={() => {
-                              setCurrentModel(m.id as SoufAIModelId);
+                              setDefaultModel(m.id as SoufAIModelId);
                               handleUpdatePreferences({ defaultModelId: m.id });
                             }}
                             className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-2 ${
-                              currentModel === m.id
+                              defaultModelId === m.id
                                 ? "bg-[#00d4aa]/10 border-[#00d4aa] text-white shadow-md shadow-[#00d4aa]/10"
                                 : "bg-[#0a1111] border-[#132222] text-[#88b0b0] hover:border-[#1a2e2e] hover:text-white"
                             }`}
                           >
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-bold">{m.name}</span>
-                              {currentModel === m.id && (
+                              {defaultModelId === m.id && (
                                 <CheckCircle2 className="w-4 h-4 text-[#00d4aa]" />
                               )}
                             </div>
