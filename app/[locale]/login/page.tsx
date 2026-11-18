@@ -127,6 +127,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+  const [resetCode, setResetCode] = useState("");
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -393,6 +394,17 @@ export default function LoginPage() {
         if (!response.ok || data.status !== true) {
           throw new Error(data.message || data.error || "Email verification failed");
         }
+        const serverSession = await ensureServerSession();
+        if (
+          serverSession.authenticated &&
+          serverSession.user?.email.toLowerCase() === cleanEmail
+        ) {
+          triggerSuccess(
+            data.user?.email || cleanEmail,
+            data.user?.id || serverSession.user.id
+          );
+          return;
+        }
         setAuthMode("login");
         setPassword("");
         setVerificationCode("");
@@ -402,22 +414,23 @@ export default function LoginPage() {
             : "Email verified. Sign in with your password."
         );
       } else if (authMode === "forgot") {
-        const response = await fetch("/api/auth/request-password-reset", {
+        const response = await fetch("/api/auth/email-otp/request-password-reset", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: cleanEmail,
-            redirectTo: `${window.location.origin}/${locale}/login?mode=reset`,
-          }),
+          body: JSON.stringify({ email: cleanEmail }),
         });
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
           throw new Error(data.message || data.error || "Password reset request failed");
         }
+        setAuthMode("reset");
+        setResetCode("");
+        setPassword("");
+        setConfirmPassword("");
         setInfoMsg(
           isRtl
-            ? "إذا كان البريد مسجلاً، فستصلك رسالة تحتوي رابط إعادة تعيين صالحاً لمدة ساعة."
-            : "If the email is registered, a password reset link valid for one hour will arrive shortly."
+            ? "إذا كان البريد مسجلاً، فستصلك رسالة تحتوي رمزاً من 6 أرقام لإعادة تعيين كلمة المرور."
+            : "If the email is registered, a 6-digit password reset code will arrive shortly."
         );
       } else if (authMode === "login") {
         // 1. Check if user is attempting Admin Master Key Login
@@ -563,9 +576,47 @@ export default function LoginPage() {
     }
   };
 
+  const handleResendResetCode = async () => {
+    if (!email.trim() || isLoading) return;
+    setIsLoading(true);
+    setErrorMsg(null);
+    setInfoMsg(null);
+    try {
+      const response = await fetch("/api/auth/email-otp/request-password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      if (!response.ok) {
+        throw new Error("Could not resend password reset code");
+      }
+      setInfoMsg(
+        isRtl
+          ? "إذا كان البريد مسجلاً، فسيصلك رمز إعادة تعيين جديد."
+          : "If the email is registered, a new password reset code will arrive."
+      );
+    } catch {
+      setErrorMsg(
+        isRtl
+          ? "تعذر إرسال الرمز الآن. انتظر قليلاً ثم حاول مجدداً."
+          : "Could not send the code right now. Wait a moment, then try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetToken || isLoading) return;
+    if (isLoading) return;
+    if (!resetToken && resetCode.length !== 6) {
+      triggerAttack(
+        isRtl
+          ? "أدخل رمز إعادة التعيين المكوّن من 6 أرقام."
+          : "Enter the 6-digit password reset code."
+      );
+      return;
+    }
     if (password.length < 6) {
       triggerAttack(isRtl ? "كلمة المرور يجب أن تتكون من 6 أحرف على الأقل." : "Password must be at least 6 characters.");
       return;
@@ -579,17 +630,28 @@ export default function LoginPage() {
     setErrorMsg(null);
     setInfoMsg(null);
     try {
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: resetToken, newPassword: password }),
-      });
+      const response = resetToken
+        ? await fetch("/api/auth/reset-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: resetToken, newPassword: password }),
+          })
+        : await fetch("/api/auth/email-otp/reset-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: email.trim().toLowerCase(),
+              otp: resetCode,
+              password,
+            }),
+          });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.message || data.error || "Password reset failed");
       }
       setAuthMode("login");
       setResetToken(null);
+      setResetCode("");
       setPassword("");
       setConfirmPassword("");
       window.history.replaceState(null, "", `/${locale}/login`);
@@ -670,7 +732,7 @@ export default function LoginPage() {
             >
               <SoufToolsLogo size={36} />
               <div className="flex flex-col text-left">
-                <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-[#e8f5f5] via-[#00d4aa] to-[#00f5c4] bg-clip-text text-transparent">
+                <span className="text-xl font-bold tracking-tight text-[#e8f5f5]">
                   SoufTools
                 </span>
                 <span className="text-[10px] text-[#4a7070] font-mono tracking-widest uppercase -mt-1">
@@ -796,7 +858,7 @@ export default function LoginPage() {
             onSubmit={authMode === "reset" ? handleResetPassword : handleEmailAuth}
             className="space-y-3"
           >
-              {authMode !== "reset" && (
+              {(authMode !== "reset" || resetToken === null) && (
                 <div>
                   <label className="block text-xs text-[#4a7070] mb-1 font-medium">
                     {isRtl ? "البريد الإلكتروني" : "Email address"}
@@ -807,7 +869,7 @@ export default function LoginPage() {
                       type="email"
                       required
                       value={email}
-                      readOnly={authMode === "verify"}
+                      readOnly={authMode === "verify" || authMode === "reset"}
                       onChange={(e) => setEmail(e.target.value)}
                       onFocus={handleInputFocus}
                       onBlur={handleInputBlur}
@@ -816,6 +878,34 @@ export default function LoginPage() {
                     />
                     <Mail className={`w-4 h-4 text-[#4a7070] absolute top-1/2 -translate-y-1/2 ${isRtl ? "right-3" : "left-3"}`} />
                   </div>
+                </div>
+              )}
+
+              {authMode === "reset" && resetToken === null && (
+                <div>
+                  <label htmlFor="reset-code" className="block text-xs text-[#4a7070] mb-1 font-medium">
+                    {isRtl ? "رمز إعادة التعيين" : "Password reset code"}
+                  </label>
+                  <input
+                    id="reset-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    dir="ltr"
+                    required
+                    maxLength={6}
+                    pattern="[0-9]{6}"
+                    value={resetCode}
+                    onChange={(e) => setResetCode(normalizeVerificationCode(e.target.value))}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
+                    placeholder="000000"
+                    aria-describedby="reset-code-hint"
+                    className="w-full px-3.5 py-3 rounded-xl bg-[#0a0f0f]/80 border border-[#00d4aa]/25 focus:border-[#00d4aa] focus:ring-1 focus:ring-[#00d4aa] text-[#e8f5f5] text-base text-center tracking-[0.45em] placeholder-[#4a7070]/50 outline-none transition-all"
+                  />
+                  <p id="reset-code-hint" className="mt-1 text-xs text-[#4a7070]">
+                    {isRtl ? "أدخل الرمز المكوّن من 6 أرقام المرسل إلى بريدك." : "Enter the 6-digit code sent to your email."}
+                  </p>
                 </div>
               )}
 
@@ -965,6 +1055,19 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={handleResendVerificationCode}
+                  disabled={isLoading}
+                  className="text-xs text-[#00d4aa] hover:text-[#00f5c4] transition-colors disabled:opacity-60"
+                >
+                  {isRtl ? "لم يصلك الرمز؟ أعد إرساله" : "Didn't receive the code? Resend it"}
+                </button>
+              </div>
+            )}
+
+            {authMode === "reset" && resetToken === null && (
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  onClick={handleResendResetCode}
                   disabled={isLoading}
                   className="text-xs text-[#00d4aa] hover:text-[#00f5c4] transition-colors disabled:opacity-60"
                 >

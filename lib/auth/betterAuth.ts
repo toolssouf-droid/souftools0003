@@ -141,7 +141,7 @@ export function createAuthInstance(customBaseUrl?: string) {
       emailVerification: {
         sendOnSignUp: true,
         sendOnSignIn: true,
-        autoSignInAfterVerification: false,
+        autoSignInAfterVerification: true,
       },
 
       plugins: [

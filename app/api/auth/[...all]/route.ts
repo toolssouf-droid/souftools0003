@@ -27,6 +27,10 @@ async function guardSensitiveAuthPost(req: NextRequest): Promise<NextResponse | 
     ? "sign-in"
     : path.endsWith("/request-password-reset")
     ? "password-reset"
+    : path.endsWith("/email-otp/request-password-reset")
+    ? "password-reset"
+    : path.endsWith("/email-otp/reset-password")
+    ? "password-reset"
     : path.endsWith("/email-otp/send-verification-otp")
     ? "verification-code"
     : null;

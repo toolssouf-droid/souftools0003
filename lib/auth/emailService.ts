@@ -167,23 +167,32 @@ export function validateAuthActionUrl(value: string): string {
     throw new Error("Authentication action URLs must use HTTPS in production");
   }
 
-  const configuredBaseUrl =
-    process.env.APP_URL ||
-    process.env.BETTER_AUTH_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
-    process.env.VERCEL_URL;
-  if (!configuredBaseUrl && process.env.NODE_ENV !== "production") {
+  const configuredBaseUrls = [
+    process.env.APP_URL,
+    process.env.BETTER_AUTH_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_URL,
+  ].filter((value): value is string => Boolean(value));
+  if (configuredBaseUrls.length === 0 && process.env.NODE_ENV !== "production") {
     return url.toString();
   }
 
-  const configuredUrl = new URL(getAuthBaseUrl());
-  if (
-    (configuredUrl.protocol !== "https:" && configuredUrl.protocol !== "http:") ||
-    configuredUrl.username ||
-    configuredUrl.password ||
-    url.origin !== configuredUrl.origin
-  ) {
+  const allowedOrigins = new Set<string>(
+    [getAuthBaseUrl(), DEFAULT_AUTH_APP_URL, ...configuredBaseUrls]
+      .map((baseUrl) => {
+        const normalized = /^https?:\/\//i.test(baseUrl) ? baseUrl : `https://${baseUrl}`;
+        try {
+          const parsed = new URL(normalized);
+          return parsed.origin;
+        } catch {
+          return "";
+        }
+      })
+      .filter(Boolean)
+  );
+
+  if (!allowedOrigins.has(url.origin)) {
     throw new Error("Authentication action URL does not match the configured application origin");
   }
 
