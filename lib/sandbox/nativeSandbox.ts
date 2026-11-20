@@ -532,6 +532,7 @@ export class NativeSandboxInstance {
       const child = spawn(command, args, {
         cwd: this.workspaceDir,
         env: {
+          NODE_ENV: "production",
           PATH: "/usr/local/bin:/usr/bin:/bin",
           CI: "true",
         },

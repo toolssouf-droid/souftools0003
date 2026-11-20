@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import {
   runSeoAudit,
   TOOLS_DIRECTORY,
@@ -858,9 +859,11 @@ export function SeoDashboardPanel() {
               {/* Site Identity Line */}
               <div className="flex items-center gap-2.5 text-xs text-[#202124]">
                 <div className="w-6 h-6 rounded-full bg-[#f1f3f4] flex items-center justify-center p-0.5 border border-gray-200 shrink-0">
-                  <img
+                  <Image
                     src="/favicon.ico"
                     alt="SoufTools"
+                    width={16}
+                    height={16}
                     className="w-4 h-4 rounded-full object-contain"
                   />
                 </div>
@@ -1059,25 +1062,25 @@ export function SeoDashboardPanel() {
         {/* Grid of Assets */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 rounded-2xl bg-[#0a0f0f] border border-[#1e2e2e] flex flex-col items-center text-center space-y-2">
-            <img src="/favicon.ico" alt="Favicon ICO" className="w-8 h-8 rounded-lg border border-[#1e2e2e]" />
+            <Image src="/favicon.ico" alt="Favicon ICO" width={32} height={32} className="w-8 h-8 rounded-lg border border-[#1e2e2e]" />
             <span className="text-[11px] font-bold text-[#e8f5f5]">favicon.ico</span>
             <span className="text-[9px] text-[#00d4aa]">32x32px (Root)</span>
           </div>
 
           <div className="p-3 rounded-2xl bg-[#0a0f0f] border border-[#1e2e2e] flex flex-col items-center text-center space-y-2">
-            <img src="/icon-192x192.png" alt="PWA Icon 192" className="w-8 h-8 rounded-lg border border-[#1e2e2e]" />
+            <Image src="/icon-192x192.png" alt="PWA Icon 192" width={32} height={32} className="w-8 h-8 rounded-lg border border-[#1e2e2e]" />
             <span className="text-[11px] font-bold text-[#e8f5f5]">PWA / Google Icon</span>
             <span className="text-[9px] text-[#00d4aa]">192x192px PNG</span>
           </div>
 
           <div className="p-3 rounded-2xl bg-[#0a0f0f] border border-[#1e2e2e] flex flex-col items-center text-center space-y-2">
-            <img src="/apple-touch-icon.png" alt="Apple Touch Icon" className="w-8 h-8 rounded-lg border border-[#1e2e2e]" />
+            <Image src="/apple-touch-icon.png" alt="Apple Touch Icon" width={32} height={32} className="w-8 h-8 rounded-lg border border-[#1e2e2e]" />
             <span className="text-[11px] font-bold text-[#e8f5f5]">Apple Touch Icon</span>
             <span className="text-[9px] text-[#00d4aa]">180x180px PNG</span>
           </div>
 
           <div className="p-3 rounded-2xl bg-[#0a0f0f] border border-[#1e2e2e] flex flex-col items-center text-center space-y-2">
-            <img src="/logo.png" alt="Schema Logo" className="w-8 h-8 rounded-lg border border-[#1e2e2e]" />
+            <Image src="/logo.png" alt="Schema Logo" width={32} height={32} className="w-8 h-8 rounded-lg border border-[#1e2e2e]" />
             <span className="text-[11px] font-bold text-[#e8f5f5]">Schema Org Logo</span>
             <span className="text-[9px] text-[#00d4aa]">512x512px PNG</span>
           </div>

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Image as ImageIcon,
   Sparkles,
@@ -174,7 +175,13 @@ export function ImagesClientPage({ locale }: ImagesClientPageProps) {
               {generatedImages.map((src, i) => (
                 <div key={i} className="rounded-2xl border border-[#1e2e2e] bg-[#111a1a] p-3 space-y-3">
                   <div className="relative aspect-square rounded-xl overflow-hidden bg-black/50">
-                    <img src={src} alt="Generated visual" className="w-full h-full object-cover" />
+                    <Image
+                      src={src}
+                      alt="Generated visual"
+                      fill
+                      sizes="(min-width: 640px) 50vw, 100vw"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div className="flex items-center justify-between text-xs font-bold">
                     <span className="text-[#88b0b0]">{aspectRatio} • {style}</span>

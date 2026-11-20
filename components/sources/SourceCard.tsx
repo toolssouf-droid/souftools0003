@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { SearchSource } from "@/lib/sourcesHelper";
 import { SourceTypeBadge } from "./SourceTypeBadge";
 import { SourcePreviewModal } from "./SourcePreviewModal";
@@ -40,13 +41,17 @@ export const SourceCard: React.FC<SourceCardProps> = ({ source }) => {
             {/* Favicon */}
             <div className="w-5 h-5 rounded-md bg-[#1e2e2e] flex items-center justify-center overflow-hidden shrink-0">
               {source.faviconUrl ? (
-                <img
+                <Image
                   src={source.faviconUrl}
                   alt={source.siteName}
+                  width={14}
+                  height={14}
+                  sizes="14px"
+                  unoptimized
                   className="w-3.5 h-3.5 object-contain"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
-                    (e.target as HTMLElement).style.display = "none";
+                    e.currentTarget.style.display = "none";
                   }}
                 />
               ) : (

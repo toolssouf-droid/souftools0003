@@ -644,9 +644,12 @@ export default function MediaLibraryPage() {
                   {/* Poster Thumbnail */}
                   <div className="w-36 sm:w-44 aspect-[2/3] rounded-2xl bg-black/50 overflow-hidden shrink-0 border border-purple-500/30 shadow-lg relative">
                     {selectedInspectItem.metadata?.posterUrl ? (
-                      <img
+                      <Image
                         src={selectedInspectItem.metadata.posterUrl}
                         alt={selectedInspectItem.metadata?.title || selectedInspectItem.mediaId}
+                        fill
+                        sizes="(min-width: 640px) 11rem, 9rem"
+                        unoptimized
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -1022,9 +1025,12 @@ export default function MediaLibraryPage() {
                       >
                         <div className="relative w-full aspect-[2/3] rounded-xl bg-[#091010] overflow-hidden mb-2">
                           {item.posterUrl ? (
-                            <img
+                            <Image
                               src={item.posterUrl}
                               alt={item.title}
+                              fill
+                              sizes="(min-width: 1024px) 16vw, (min-width: 640px) 25vw, 50vw"
+                              unoptimized
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                           ) : (
@@ -1232,9 +1238,12 @@ export default function MediaLibraryPage() {
                       onClick={() => handleResumePlayback(item)}
                     >
                       {item.metadata?.posterUrl ? (
-                        <img
+                        <Image
                           src={item.metadata.posterUrl}
                           alt={item.metadata?.title || item.mediaId}
+                          fill
+                          sizes="(min-width: 1024px) 16vw, (min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw"
+                          unoptimized
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
@@ -1376,7 +1385,14 @@ export default function MediaLibraryPage() {
                     <div className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer" onClick={() => handleResumePlayback(item)}>
                       <div className="relative w-16 h-12 rounded-xl bg-[#050808] overflow-hidden shrink-0">
                         {item.metadata?.posterUrl ? (
-                          <img src={item.metadata.posterUrl} alt="" className="w-full h-full object-cover" />
+                          <Image
+                            src={item.metadata.posterUrl}
+                            alt=""
+                            fill
+                            sizes="64px"
+                            unoptimized
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-purple-400/50">
                             <Film className="w-5 h-5" />
