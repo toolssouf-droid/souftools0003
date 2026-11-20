@@ -26,6 +26,12 @@
   - جدولة المهام الخلفية (`lib/scheduler/serverTaskRunner.ts` و`/api/cron/agent-scheduler`).
   - جدار حماية التطبيقات **SoufShield WAF**، `modelArmorGuardrail`، منع SSRF، وتشفير المفاتيح بـ **AES-256-GCM** (`lib/security/vault.ts`).
 
+### إبقاء خادم التطبيق نشطاً
+
+يوفر `GET /api/health` فحص حياة خفيفاً لا يتصل بقاعدة البيانات أو خدمات الذكاء الاصطناعي. يرسل Workflow في `.github/workflows/keep-server-alive.yml` طلباً مجدولاً ويسجل نتيجة HTTP؛ اضبط متغير المستودع `HEALTHCHECK_URL` في GitHub Actions على عنوان التطبيق الفعلي المنتهي بـ `/api/health`. يعمل الجدول بعد إضافة الـ Workflow إلى الفرع الافتراضي، ويمكن اختباره يدوياً عبر `workflow_dispatch`.
+
+يستخدم GitHub cron التعبير `*/14 * * * *`، وهو ليس فاصلاً ثابتاً منقضياً: الطلبات تقع عند الدقائق 00 و14 و28 و42 و56، ثم تكون الفجوة إلى الساعة التالية 4 دقائق.
+
 ---
 
 ## الإعداد والتشغيل المحلي (Setup & Scripts)
