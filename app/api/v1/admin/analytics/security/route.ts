@@ -5,8 +5,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AnalyticsService } from "@/lib/analytics/analyticsService";
 import { AnalyticsTimeRange } from "@/lib/analytics/types";
+import { requireAnalyticsAdmin } from "@/lib/analytics/analyticsAuth";
 
 export async function GET(req: NextRequest) {
+  const authorization = await requireAnalyticsAdmin(req);
+  if (authorization.response) return authorization.response;
   try {
     const { searchParams } = new URL(req.url);
     const range = (searchParams.get("range") || "7d") as AnalyticsTimeRange;

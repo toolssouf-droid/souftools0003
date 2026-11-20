@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAndValidatePublicUrl } from "@/lib/security/ssrfGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -17,32 +18,50 @@ export async function GET(req: NextRequest) {
       return new NextResponse("Missing 'url' query parameter", { status: 400 });
     }
 
-    let parsed: URL;
-    try {
-      parsed = new URL(targetUrl);
-    } catch {
-      return new NextResponse("Invalid media URL format", { status: 400 });
+    let parsed: URL | undefined;
+    let redirectCountExceeded = false;
+    let currentUrl = targetUrl;
+    let upstreamResponse: Response | null = null;
+
+    for (let redirectCount = 0; redirectCount <= 5; redirectCount++) {
+      const validation = await resolveAndValidatePublicUrl(currentUrl);
+      if (!validation.safe || !validation.url) {
+        return new NextResponse(validation.error || "Forbidden host", { status: 403 });
+      }
+      parsed = validation.url;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15_000);
+      try {
+        upstreamResponse = await fetch(parsed.toString(), {
+          method: "GET",
+          headers: {
+            "User-Agent": "SoufToolsMediaProxy/1.0",
+            Accept: "*/*",
+            ...(req.headers.get("range") ? { Range: req.headers.get("range")! } : {}),
+          },
+          redirect: "manual",
+          signal: controller.signal,
+          cache: "no-store",
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      if ([301, 302, 303, 307, 308].includes(upstreamResponse.status)) {
+        const location = upstreamResponse.headers.get("location");
+        if (!location) break;
+        currentUrl = new URL(location, parsed).toString();
+        continue;
+      }
+      break;
     }
 
-    // Security check: only allow http/https protocols and reject private IP spaces
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      return new NextResponse("Invalid URL protocol", { status: 400 });
+    if (!upstreamResponse || !parsed) {
+      return new NextResponse("Failed to resolve media redirect", { status: 502 });
     }
-
-    const hostname = parsed.hostname.toLowerCase();
-    const isPrivate =
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname === "0.0.0.0" ||
-      hostname.startsWith("192.168.") ||
-      hostname.startsWith("10.") ||
-      hostname.startsWith("172.16.") ||
-      hostname.endsWith(".internal") ||
-      hostname.endsWith(".local");
-
-    // Only allow public media streaming (e.g. archive.org, wikimedia, cdn, public s3, etc.)
-    if (isPrivate) {
-      return new NextResponse("Forbidden host", { status: 403 });
+    if (redirectCountExceeded) {
+      return new NextResponse("Too many redirects", { status: 502 });
     }
 
     // Forward Range header if requested by the HTML5 video element
@@ -56,12 +75,6 @@ export async function GET(req: NextRequest) {
     if (rangeHeader) {
       upstreamHeaders["Range"] = rangeHeader;
     }
-
-    const upstreamResponse = await fetch(targetUrl, {
-      method: "GET",
-      headers: upstreamHeaders,
-      redirect: "follow",
-    });
 
     if (!upstreamResponse.ok && upstreamResponse.status !== 206) {
       return new NextResponse(`Upstream media server returned ${upstreamResponse.status}`, {

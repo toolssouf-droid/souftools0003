@@ -12,7 +12,6 @@ export async function GET(req: NextRequest) {
         { status: 503 }
       );
     }
-
     const authHeader = req.headers.get("authorization") || "";
     const customHeader = req.headers.get("x-cron-secret") || "";
     const candidate = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : customHeader.trim();

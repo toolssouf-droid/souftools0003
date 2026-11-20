@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Mic,
@@ -30,31 +30,147 @@ export function AudioClientPage({ locale }: AudioClientPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [error, setError] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const liveTranscriptRef = useRef("");
 
-  const startRecording = () => {
-    setIsRecording(true);
-    setRecordingDuration(0);
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+      if (recorderRef.current?.state === "recording") {
+        recorderRef.current.stop();
+      }
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
+
+  const stopStream = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  };
+
+  const startRecording = async () => {
+    setError("");
+    setIsLoading(false);
     setTranscription("");
-    timerRef.current = setInterval(() => {
-      setRecordingDuration((prev) => prev + 1);
-    }, 1000);
+    liveTranscriptRef.current = "";
+    chunksRef.current = [];
+
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setError(isRtl
+        ? "المتصفح لا يدعم التسجيل الصوتي المباشر. استخدم متصفحاً حديثاً وافتح الصفحة عبر HTTPS."
+        : "This browser cannot record audio directly. Use a modern browser and open the page over HTTPS.");
+      return;
+    }
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+    } catch (err: any) {
+      const denied = err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError";
+      setError(denied
+        ? (isRtl
+          ? "تم حظر إذن الميكروفون. فعّله من إعدادات المتصفح بجوار عنوان الصفحة."
+          : "Microphone permission is blocked. Allow it in the browser settings beside the address bar.")
+        : (isRtl
+          ? "تعذر الوصول إلى الميكروفون. تحقق من توصيل الجهاز وعدم استخدامه في تطبيق آخر."
+          : "Could not access the microphone. Check that it is connected and not in use elsewhere."));
+      return;
+    }
+
+    streamRef.current = stream;
+
+    try {
+      const supportedTypes = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+      const mimeType = supportedTypes.find((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      recorderRef.current = recorder;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunksRef.current.push(event.data);
+      };
+      recorder.start(250);
+
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = isRtl ? "ar-SA" : "en-US";
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.onresult = (event: any) => {
+          let transcript = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          if (transcript.trim()) {
+            liveTranscriptRef.current = transcript.trim();
+            setTranscription(liveTranscriptRef.current);
+          }
+        };
+        recognition.onerror = (event: any) => {
+          if (event?.error !== "no-speech") {
+            setError(isRtl
+              ? "تعذر التفريغ المباشر في هذا المتصفح، لكن التسجيل الصوتي ما زال يعمل."
+              : "Live transcription is unavailable in this browser, but audio recording is still active.");
+          }
+        };
+        try {
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch {}
+      }
+
+      setIsRecording(true);
+      setRecordingDuration(0);
+      timerRef.current = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    } catch (err: any) {
+      stopStream();
+      setError(isRtl
+        ? "فشل تشغيل مسجل الصوت في المتصفح."
+        : "Failed to start the browser audio recorder.");
+    }
   };
 
   const stopRecording = () => {
     setIsRecording(false);
     if (timerRef.current) clearInterval(timerRef.current);
-    setIsLoading(true);
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
+    }
 
-    // Simulate speech-to-text processing
-    setTimeout(() => {
-      setIsLoading(false);
-      setTranscription(
-        isRtl
-          ? "أهلاً بكم في منصة SoufTools الذكية. تم تسجيل وتحليل المقطع الصوتي بدقة فائقة عبر محرك معالجة الصوت المتقدم."
-          : "Welcome to SoufTools. Audio signal captured and transcribed with high-fidelity neural acoustics."
-      );
-    }, 1500);
+    const recorder = recorderRef.current;
+    if (recorder?.state === "recording") {
+      recorder.onstop = () => {
+        setIsLoading(false);
+        if (liveTranscriptRef.current.trim()) {
+          setTranscription(liveTranscriptRef.current.trim());
+        } else {
+          setError(isRtl
+            ? "تم إيقاف التسجيل، لكن لم يتمكن المتصفح من التفريغ الصوتي إلى نص."
+            : "Recording stopped, but the browser did not produce a transcription.");
+        }
+        stopStream();
+      };
+      setIsLoading(true);
+      recorder.stop();
+    } else {
+      stopStream();
+    }
   };
 
   const handleCopy = () => {
@@ -102,6 +218,11 @@ export function AudioClientPage({ locale }: AudioClientPageProps) {
         <div className="glass-card rounded-3xl border border-[#1e2e2e] bg-[#0d1414] shadow-2xl p-6 sm:p-8 space-y-6 text-center">
           {/* MICROPHONE BUTTON WITH PULSE */}
           <div className="flex flex-col items-center justify-center gap-4 py-4">
+            {error && (
+              <div className="w-full max-w-xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-300">
+                {error}
+              </div>
+            )}
             <button
               onClick={isRecording ? stopRecording : startRecording}
               className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl cursor-pointer ${

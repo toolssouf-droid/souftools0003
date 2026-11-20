@@ -419,8 +419,8 @@ export default function LoginPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: cleanEmail }),
         });
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success !== true) {
           throw new Error(data.message || data.error || "Password reset request failed");
         }
         setAuthMode("reset");
@@ -587,8 +587,9 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
-      if (!response.ok) {
-        throw new Error("Could not resend password reset code");
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.success !== true) {
+        throw new Error(data.message || data.error || "Could not resend password reset code");
       }
       setInfoMsg(
         isRtl
@@ -866,7 +867,9 @@ export default function LoginPage() {
                   <div className="relative">
                     <input
                       ref={emailInputRef}
+                      name="email"
                       type="email"
+                      autoComplete="email"
                       required
                       value={email}
                       readOnly={authMode === "verify" || authMode === "reset"}
@@ -943,6 +946,7 @@ export default function LoginPage() {
                     {isRtl ? "الاسم الكامل" : "Full Name"}
                   </label>
                   <input
+                    name="fullName"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -964,7 +968,9 @@ export default function LoginPage() {
                 <div className="relative">
                   <input
                     ref={passwordInputRef}
+                    name="password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete={authMode === "login" ? "current-password" : "new-password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -998,7 +1004,9 @@ export default function LoginPage() {
                     {isRtl ? "تأكيد كلمة المرور الجديدة" : "Confirm new password"}
                   </label>
                   <input
+                    name="confirmPassword"
                     type="password"
+                    autoComplete="new-password"
                     required
                     minLength={6}
                     value={confirmPassword}

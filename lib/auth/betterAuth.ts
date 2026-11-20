@@ -81,12 +81,26 @@ export function createAuthInstance(customBaseUrl?: string) {
 
     const authSecret =
       process.env.BETTER_AUTH_SECRET ||
-      process.env.SESSION_SECRET ||
-      crypto.createHash("sha256").update(process.cwd() + "_better_auth_runtime").digest("hex");
+      process.env.SESSION_SECRET;
+    if (!authSecret || authSecret.trim().length < 32) {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error("Production authentication secret is missing or too short");
+      }
+      throw new Error("BETTER_AUTH_SECRET or SESSION_SECRET must contain at least 32 characters");
+    }
 
     return betterAuth({
       secret: authSecret,
       baseURL: appUrl,
+      advanced: {
+        useSecureCookies: process.env.NODE_ENV === "production",
+        defaultCookieAttributes: {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+          path: "/",
+        },
+      },
 
       trustedOrigins: [
         "http://localhost:3000",
@@ -182,8 +196,7 @@ export function createAuthInstance(customBaseUrl?: string) {
         expiresIn: 60 * 60 * 24 * 30, // 30 days
         updateAge: 60 * 60 * 24, // 1 day
         cookieCache: {
-          enabled: true,
-          maxAge: 5 * 60,
+          enabled: false,
         },
       },
 
@@ -192,6 +205,8 @@ export function createAuthInstance(customBaseUrl?: string) {
           role: {
             type: "string",
             defaultValue: "user",
+            required: true,
+            input: false,
           },
           storageUsedBytes: {
             type: "number",

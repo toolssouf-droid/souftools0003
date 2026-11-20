@@ -45,7 +45,7 @@ export const SOUFAI_MODELS: Record<string, SoufAIModelDef> = {
     descriptionEn: "Lightning fast model for quick queries, summaries and instant answers",
     defaultProviders: [
       { providerId: "gemini", model: "gemini-3.7-flash", priority: 1, routingMode: "priority" },
-      { providerId: "groq", model: "llama-3.1-8b-instant", priority: 2, routingMode: "round_robin" },
+      { providerId: "groq", model: "openai/gpt-oss-20b", priority: 2, routingMode: "round_robin" },
       { providerId: "deepseek", model: "deepseek-chat", priority: 3, routingMode: "priority" },
     ]
   },
@@ -61,7 +61,7 @@ export const SOUFAI_MODELS: Record<string, SoufAIModelDef> = {
     descriptionEn: "The balanced daily driver for writing, reasoning and everyday tasks",
     defaultProviders: [
       { providerId: "gemini", model: "gemini-3.7-flash", priority: 1, routingMode: "priority" },
-      { providerId: "groq", model: "llama-3.3-70b-versatile", priority: 2, routingMode: "round_robin" },
+      { providerId: "groq", model: "openai/gpt-oss-120b", priority: 2, routingMode: "round_robin" },
       { providerId: "openai", model: "gpt-4o-mini", priority: 3, routingMode: "priority" },
     ]
   },
@@ -117,7 +117,7 @@ export const AI_PROVIDERS: AIProviderDef[] = [
   { id: "gemini", name: "Google AI (Gemini)", category: "llm", models: ["gemini-3-flash-preview", "gemini-flash-lite-latest", "gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.7-flash", "gemini-flash-latest", "gemini-3.1-flash-lite", "gemini-3.1-pro-preview"], requiresKey: true, docUrl: "https://ai.google.dev" },
   { id: "openai", name: "OpenAI", category: "llm", models: ["gpt-4o", "gpt-4o-mini", "o1", "o3-mini"], requiresKey: true, docUrl: "https://platform.openai.com" },
   { id: "anthropic", name: "Anthropic", category: "llm", models: ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-opus-latest"], requiresKey: true, docUrl: "https://anthropic.com" },
-  { id: "groq", name: "Groq", category: "llm", models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"], requiresKey: true, docUrl: "https://groq.com" },
+  { id: "groq", name: "Groq", category: "llm", models: ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"], requiresKey: true, docUrl: "https://groq.com" },
   { id: "deepseek", name: "DeepSeek", category: "llm", models: ["deepseek-chat", "deepseek-reasoner", "deepseek-coder"], requiresKey: true, docUrl: "https://deepseek.com" },
   { id: "mistral", name: "Mistral AI", category: "llm", models: ["mistral-large-latest", "pixtral-12b-2409", "codestral-latest"], requiresKey: true, docUrl: "https://mistral.ai" },
   { id: "xai", name: "xAI (Grok)", category: "llm", models: ["grok-2-latest", "grok-beta"], requiresKey: true, docUrl: "https://x.ai" },

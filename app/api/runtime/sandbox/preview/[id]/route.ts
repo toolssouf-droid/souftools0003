@@ -5,6 +5,7 @@ import type { SupportedFramework } from "@/lib/agent/coding/types";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { requireAuth } from "@/lib/auth/serverAuth";
 
 export async function GET(
   req: NextRequest,
@@ -12,6 +13,9 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
+    const authResult = await requireAuth(req);
+    if ("errorResponse" in authResult) return authResult.errorResponse;
+    const user = authResult.user;
 
     // 1. Strict ID format validation to prevent directory traversal / command injection
     if (!id || !/^[a-zA-Z0-9_-]{3,64}$/.test(id)) {
@@ -19,6 +23,9 @@ export async function GET(
     }
 
     const sbx = SandboxManager.getSandbox(id);
+    if (!sbx || sbx.userId !== user.id) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
     const baseSandboxesDir =
       process.env.SANDBOX_BASE_DIR ||
       (process.platform === "win32"
@@ -32,9 +39,9 @@ export async function GET(
     }
 
     const securityHeaders = {
-      "Content-Security-Policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; connect-src 'self' ws: wss: https:; frame-ancestors 'self';",
+      "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob: https:; font-src data:; connect-src 'none'; frame-src 'none'; frame-ancestors 'self'; base-uri 'none'; form-action 'none';",
       "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "SAMEORIGIN",
+      "X-Frame-Options": "DENY",
       "Referrer-Policy": "no-referrer",
       "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     };

@@ -16,8 +16,11 @@ const STORAGE_PATH_REQUIRED = process.env.VERCEL === "1" && !process.env.STORAGE
 
 const SIGNING_SECRET =
   process.env.STORAGE_SIGNING_SECRET ||
-  process.env.ENCRYPTION_SECRET ||
-  "souftools-secure-storage-key-2026";
+  process.env.ENCRYPTION_SECRET;
+
+if (!SIGNING_SECRET || SIGNING_SECRET.trim().length < 32) {
+  throw new Error("STORAGE_SIGNING_SECRET or ENCRYPTION_SECRET must contain at least 32 characters");
+}
 
 export interface StoredFileResult {
   fileId: string;

@@ -24,13 +24,15 @@ export const AUTH_SIG_COOKIE_NAME = "souftools_auth_sig";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 function getSessionSigningSecret(): string {
-  return (
+  const secret =
     process.env.SESSION_SECRET ||
     process.env.BETTER_AUTH_SECRET ||
     process.env.ENCRYPTION_SECRET ||
-    process.env.MASTER_ENCRYPTION_KEY ||
-    crypto.createHash("sha256").update(process.cwd() + "_souftools_runtime_key").digest("hex")
-  );
+    process.env.MASTER_ENCRYPTION_KEY;
+  if (!secret || secret.trim().length < 32) {
+    throw new Error("Authentication signing secret is missing or too short");
+  }
+  return secret.trim();
 }
 
 export interface SignedSessionPayload {
@@ -141,12 +143,13 @@ export function attachVerifiedSessionCookies(
     path: "/",
     maxAge,
     sameSite: "lax",
-    httpOnly: false,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production" && shouldUseSecureCookies(params.req.headers),
   });
 }
 
 function normalizeRole(role?: string | null, email?: string | null): "user" | "admin" | "super_admin" {
-  if (isUserAdmin(email) || role === "super_admin") return "super_admin";
+  if (role === "super_admin" && isUserAdmin(email)) return "super_admin";
   if (role === "admin") return "admin";
   return "user";
 }

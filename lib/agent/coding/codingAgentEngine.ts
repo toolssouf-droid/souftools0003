@@ -153,6 +153,9 @@ export async function runCodingAgent(
   options: CodingAgentRunOptions
 ): Promise<CodingAgentRunResult> {
   const { userPrompt, workspace, modelId = "coder", isBuildUIMode = false } = options;
+  if (!options.userId) {
+    throw new Error("Authenticated user identity is required");
+  }
 
   const securityVerdict = nexusSecurityController.inspectInputPrompt(userPrompt);
   if (!securityVerdict.safe) {
@@ -183,6 +186,7 @@ export async function runCodingAgent(
     {
       title: `تعديل تلقائي: ${userPrompt.slice(0, 30)}`,
       description: `تم الحفظ قبل بدء تنفيذ: ${userPrompt}`,
+      userId: options.userId,
     }
   );
   if (checkpointResult.updatedWorkspace) {
@@ -299,7 +303,7 @@ ${isBuildUIMode ? "[وضع Build UI مفعل: التركيز على بناء و�
           const res = await CodingAgentToolManager.executeTool(
             currentWorkspace,
             tc.tool,
-            tc.args || {}
+            { ...(tc.args || {}), userId: options.userId }
           );
 
           if (res.updatedWorkspace) {
@@ -325,7 +329,7 @@ ${isBuildUIMode ? "[وضع Build UI مفعل: التركيز على بناء و�
       const previewRes = await CodingAgentToolManager.executeTool(
         currentWorkspace,
         "start_preview",
-        {}
+        { userId: options.userId }
       );
       if (previewRes.updatedWorkspace) {
         currentWorkspace = { ...currentWorkspace, ...previewRes.updatedWorkspace };
@@ -336,7 +340,7 @@ ${isBuildUIMode ? "[وضع Build UI مفعل: التركيز على بناء و�
       const testRes = await CodingAgentToolManager.executeTool(
         currentWorkspace,
         "run_tests",
-        {}
+        { userId: options.userId }
       );
       if (testRes.logs) generatedLogs.push(...testRes.logs);
       if (testRes.step) executedSteps.push(testRes.step);

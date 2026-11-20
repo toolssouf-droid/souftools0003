@@ -52,6 +52,8 @@ export class NativeSandboxInstance {
   private timeoutTimer: NodeJS.Timeout | null = null;
   private memoryWatcherTimer: NodeJS.Timeout | null = null;
   private logs: Array<{ timestamp: number; stream: "stdout" | "stderr" | "system"; message: string }> = [];
+  private containerName: string;
+  private containerRuntimeAvailable: boolean | null = null;
 
   constructor(options: {
     id: string;
@@ -85,6 +87,7 @@ export class NativeSandboxInstance {
     this.sandboxDir = path.resolve(path.join(baseSandboxDir, this.id));
     this.workspaceDir = path.join(this.sandboxDir, "workspace");
     this.tmpDir = path.join(this.sandboxDir, ".tmp");
+    this.containerName = `souftools_${this.id.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
 
     this.initFilesystem();
     this.addLog("system", `[Sandbox Created] Initialized isolated sandbox environment (${this.id})`);
@@ -425,6 +428,33 @@ export class NativeSandboxInstance {
   /**
    * Executes a command inside the isolated Linux sandbox
    */
+  private async verifyContainerIsolation(): Promise<boolean> {
+    if (this.containerRuntimeAvailable !== null) {
+      return this.containerRuntimeAvailable;
+    }
+    if (process.platform === "win32") {
+      this.containerRuntimeAvailable = false;
+      return false;
+    }
+    try {
+      const dockerPath = "/usr/bin/docker";
+      if (!fs.existsSync(dockerPath)) {
+        this.containerRuntimeAvailable = false;
+        return false;
+      }
+      execSync(`${dockerPath} info --format '{{.ServerVersion}}'`, {
+        encoding: "utf8",
+        timeout: 5000,
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      this.containerRuntimeAvailable = true;
+      return true;
+    } catch {
+      this.containerRuntimeAvailable = false;
+      return false;
+    }
+  }
+
   public async executeCommand(
     cmd: string,
     options?: {
@@ -434,6 +464,12 @@ export class NativeSandboxInstance {
       onStderr?: (data: string) => void;
     }
   ): Promise<ExecutionResult> {
+    if (!(await this.verifyContainerIsolation())) {
+      this.status = "failed";
+      this.errorMessage = "Safe execution is unavailable: a Docker/container runtime is required";
+      throw new Error(this.errorMessage);
+    }
+
     this.lastActivity = Date.now();
     const startTime = Date.now();
     const timeoutMs = options?.timeoutMs || 120000; // 2 mins max per single command
@@ -446,7 +482,45 @@ export class NativeSandboxInstance {
     }
 
     const workingDir = options?.cwd ? this.resolveSafePath(options.cwd) : this.workspaceDir;
-    const { command, args } = this.buildIsolatedCommand(cmd);
+    const relativeCwd =
+      path.relative(this.workspaceDir, workingDir).replace(/\\/g, "/").replace(/^$/, ".");
+    const image = process.env.SANDBOX_RUNTIME_IMAGE || "node:20-alpine";
+    const args = [
+      "run",
+      "--rm",
+      "--name",
+      this.containerName,
+      "--network",
+      "none",
+      "--read-only",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--pids-limit",
+      String(this.limits.maxProcesses),
+      "--memory",
+      `${this.limits.ramMb}m`,
+      "--cpus",
+      String(this.limits.cpuCores),
+      "--tmpfs",
+      "/tmp:size=64m,noexec,nosuid,nodev",
+      "-v",
+      `${this.workspaceDir}:/workspace:rw`,
+      "-w",
+      `/workspace/${relativeCwd === "." ? "" : relativeCwd}`,
+      "--env",
+      "NODE_ENV=production",
+      "--env",
+      "CI=true",
+      "--env",
+      "DISABLE_HMR=true",
+      image,
+      "sh",
+      "-c",
+      cmd,
+    ];
+    const command = "/usr/bin/docker";
 
     return new Promise((resolve) => {
       let stdoutAcc = "";
@@ -456,8 +530,11 @@ export class NativeSandboxInstance {
       this.addLog("system", `$ ${cmd}`);
 
       const child = spawn(command, args, {
-        cwd: workingDir,
-        env: this.getSanitizedEnv(),
+        cwd: this.workspaceDir,
+        env: {
+          PATH: "/usr/local/bin:/usr/bin:/bin",
+          CI: "true",
+        },
         detached: true,
         stdio: ["ignore", "pipe", "pipe"],
       });
@@ -536,6 +613,11 @@ export class NativeSandboxInstance {
    * Starts the sandbox project and background service
    */
   public async start(): Promise<{ success: boolean; previewUrl?: string; message: string }> {
+    if (!(await this.verifyContainerIsolation())) {
+      this.status = "failed";
+      this.errorMessage = "Safe sandbox startup unavailable: Docker/container isolation is required";
+      throw new Error(this.errorMessage);
+    }
     this.status = "starting";
     this.startedAt = Date.now();
     this.lastActivity = Date.now();

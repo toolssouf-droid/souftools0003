@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { AI_PROVIDERS } from "./index";
 import { PROVIDER_KEY_FORMATS, validateKeySyntax } from "../keyFormats";
-import { isChatProviderSupported } from "../router";
+import { isChatProviderSupported, resolveSafeChatModel } from "../router";
 import {
   ALL_ROUTABLE_CHAT_PROVIDERS,
   OPENAI_COMPATIBLE_BASE_URLS,
@@ -12,6 +12,9 @@ import {
   signAwsV4Request,
   getChatEndpointForProvider,
   executeRestChatRequest,
+  filterChatSupportedModels,
+  getProviderHttpErrorMessage,
+  getProviderNetworkErrorMessage,
   testProviderKeyLive,
   fetchProviderModelsLive,
 } from "./providerAdapters";
@@ -65,6 +68,34 @@ describe("Provider Registry Completeness (All 41 AI Providers + 6 Tools)", () =>
         `LLM provider '${p.id}' must be in ALL_ROUTABLE_CHAT_PROVIDERS`
       );
     }
+  });
+
+  describe("Groq model selection and errors", () => {
+    it("keeps GPT-OSS models in the chat catalog and preserves the selected Groq model ID", () => {
+      const models = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "whisper-large-v3"];
+      assert.deepEqual(filterChatSupportedModels(models, "groq"), [
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+      ]);
+      assert.equal(resolveSafeChatModel("groq", "openai/gpt-oss-120b"), "openai/gpt-oss-120b");
+      assert.equal(resolveSafeChatModel("groq", "openai/gpt-oss-20b"), "openai/gpt-oss-20b");
+      assert.equal(resolveSafeChatModel("openai", "gpt-4o"), "gpt-4o");
+      const groqProvider = AI_PROVIDERS.find((provider) => provider.id === "groq");
+      assert.ok(groqProvider);
+      assert.ok(groqProvider.models.includes("openai/gpt-oss-20b"));
+      assert.ok(groqProvider.models.includes("openai/gpt-oss-120b"));
+      assert.equal(groqProvider.models.some((model) => model.startsWith("llama-3.")), false);
+    });
+
+    it("maps provider status and network failures to understandable, non-technical messages", () => {
+      assert.match(getProviderHttpErrorMessage(401), /مفتاح API غير صالح/);
+      assert.match(getProviderHttpErrorMessage(403), /الصلاحيات/);
+      assert.match(getProviderHttpErrorMessage(404), /غير موجود أو غير متاح/);
+      assert.match(getProviderHttpErrorMessage(429), /حدود الاستخدام/);
+      assert.match(getProviderHttpErrorMessage(503), /عطلاً مؤقتاً/);
+      assert.match(getProviderNetworkErrorMessage(true), /انتهت مهلة/);
+      assert.match(getProviderNetworkErrorMessage(false), /الشبكة/);
+    });
   });
 
   it("defines syntax validation rules for every AI provider and tool provider", () => {
@@ -684,5 +715,74 @@ describe("Audio, Embeddings, & Live Model Fetching", () => {
         assert.deepEqual(nov.models, ["live-model-1", "live-model-2"]);
       }
     );
+  });
+
+  it("fetches Groq's live model catalog, including GPT-OSS IDs, using the supplied key", async () => {
+    let capturedUrl = "";
+    let capturedAuthorization = "";
+    await withMockFetch(
+      (async (input, init) => {
+        capturedUrl = String(input);
+        capturedAuthorization = new Headers(init?.headers).get("authorization") || "";
+        return jsonResponse({
+          data: [
+            { id: "openai/gpt-oss-20b" },
+            { id: "openai/gpt-oss-120b" },
+            { id: "whisper-large-v3" },
+          ],
+        });
+      }) as typeof globalThis.fetch,
+      async () => {
+        const result = await fetchProviderModelsLive("groq", "groq-test-key");
+        assert.equal(result.success, true);
+        assert.deepEqual(result.models, [
+          "openai/gpt-oss-20b",
+          "openai/gpt-oss-120b",
+          "whisper-large-v3",
+        ]);
+        assert.equal(capturedUrl, "https://api.groq.com/openai/v1/models");
+        assert.equal(capturedAuthorization, "Bearer groq-test-key");
+      }
+    );
+  });
+
+  it("sends Groq chat requests using the selected model ID and returns the provider response", async () => {
+    let capturedUrl = "";
+    let capturedBody: any;
+    await withMockFetch(
+      (async (input, init) => {
+        capturedUrl = String(input);
+        capturedBody = JSON.parse(String(init?.body));
+        return jsonResponse({ choices: [{ message: { content: "Groq reply" } }] });
+      }) as typeof globalThis.fetch,
+      async () => {
+        const result = await executeRestChatRequest({
+          providerId: "groq",
+          model: "openai/gpt-oss-120b",
+          apiKey: "groq-test-key",
+          systemPrompt: "sys",
+          messages: [],
+          userPrompt: "ping",
+        });
+        assert.equal(result.ok, true);
+        assert.equal(result.text, "Groq reply");
+        assert.equal(capturedUrl, "https://api.groq.com/openai/v1/chat/completions");
+        assert.equal(capturedBody.model, "openai/gpt-oss-120b");
+      }
+    );
+  });
+
+  it("preserves Groq catalog HTTP error status codes for user-facing classification", async () => {
+    for (const status of [401, 403, 404, 429, 503]) {
+      await withMockFetch(
+        (async () => jsonResponse({ error: "provider detail" }, status)) as typeof globalThis.fetch,
+        async () => {
+          const result = await fetchProviderModelsLive("groq", "groq-test-key");
+          assert.equal(result.success, false);
+          assert.equal(result.statusCode, status);
+          assert.equal(result.error?.includes("provider detail"), false);
+        }
+      );
+    }
   });
 });

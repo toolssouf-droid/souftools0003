@@ -11,22 +11,12 @@ export interface AuthSessionData {
   time?: number;
 }
 
-const ADMIN_LIST = [
-  "souftoolsai@gmail.com",
-  "lrsoufyane2007@gmail.com",
-  "souftoolsheb@gmail.com",
-  "toolssouf@gmail.com",
-  "aqurivo@gmail.com",
-];
-
 export function setAuthCookie(email: string, userId?: string, isAdmin?: boolean): void {
   if (typeof window === "undefined") return;
   try {
     const cleanEmail = email.trim().toLowerCase();
     const effectiveIsAdmin =
-      isAdmin !== undefined
-        ? isAdmin
-        : ADMIN_LIST.includes(cleanEmail);
+      isAdmin === true;
 
     const sessionData: AuthSessionData = {
       email: cleanEmail,
@@ -68,9 +58,7 @@ export function getAuthCookie(): AuthSessionData | null {
         if (data && typeof data === "object" && data.email) {
           const cleanEmail = data.email.trim().toLowerCase();
           const uId = data.userId || data.uid || undefined;
-          const isAdm =
-            data.isAdmin ??
-            ADMIN_LIST.includes(cleanEmail);
+          const isAdm = data.isAdmin === true;
           return {
             email: cleanEmail,
             userId: uId,
@@ -94,9 +82,7 @@ export function getAuthCookie(): AuthSessionData | null {
       if (data && typeof data === "object" && data.email) {
         const cleanEmail = data.email.trim().toLowerCase();
         const uId = data.userId || data.uid || undefined;
-        const isAdm =
-          data.isAdmin ??
-          ADMIN_LIST.includes(cleanEmail);
+        const isAdm = data.isAdmin === true;
         return {
           email: cleanEmail,
           userId: uId,

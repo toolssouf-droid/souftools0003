@@ -6,13 +6,7 @@
 
 import crypto from "crypto";
 
-export const ADMIN_EMAILS: string[] = [
-  "souftoolsai@gmail.com",
-  "lrsoufyane2007@gmail.com",
-  "souftoolsheb@gmail.com",
-  "toolssouf@gmail.com",
-  "aqurivo@gmail.com",
-];
+export const ADMIN_EMAILS: string[] = [];
 
 /**
  * Checks if a given email belongs to an authorized super administrator.

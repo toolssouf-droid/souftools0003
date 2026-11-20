@@ -779,7 +779,7 @@ export const CodingWorkspaceWidget: React.FC<CodingWorkspaceWidgetProps> = ({
                   srcDoc={htmlPreviewContent}
                   title="Live Sandbox Preview"
                   className="w-full h-full border-0 bg-[#0a0f0f]"
-                  sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
+                  sandbox="allow-scripts allow-modals allow-forms"
                 />
               </div>
             </div>

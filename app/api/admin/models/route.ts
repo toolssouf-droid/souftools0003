@@ -2,57 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/serverAuth";
 import { decryptKey } from "@/lib/encryption";
 import { loadServerAdminConfig } from "@/lib/adminConfigStore";
-import { fetchProviderModelsLive } from "@/lib/providers/providerAdapters";
-
-// Filter out audio, embedding, moderation, and unsupported models from chat selection
-function filterChatSupportedModels(models: string[], providerId: string): string[] {
-  return models.filter((id) => {
-    if (!id || typeof id !== "string") return false;
-    const lower = id.toLowerCase();
-    
-    // Filter non-chat audio / whisper / speech / tts models
-    if (
-      lower.includes("whisper") ||
-      lower.includes("tts") ||
-      lower.includes("speech") ||
-      lower.includes("audio-transcription") ||
-      lower.includes("conformer")
-    ) {
-      return false;
-    }
-    
-    // Filter embeddings
-    if (
-      lower.includes("embed") ||
-      lower.includes("bge-") ||
-      lower.includes("gte-") ||
-      lower.includes("voyage-")
-    ) {
-      return false;
-    }
-    
-    // Filter moderation & safety guards
-    if (
-      lower.includes("guard") ||
-      lower.includes("moderation") ||
-      lower.includes("safety")
-    ) {
-      return false;
-    }
-    
-    // Filter extreme rate-limited or community preview models with 8k TPM on Groq
-    if (providerId === "groq" && (lower.includes("gpt-oss-120b") || lower.includes("gpt-oss-20b"))) {
-      return false;
-    }
-
-    // Filter deprecated / unavailable models for Gemini (prevent 404 NOT_FOUND)
-    if (providerId === "gemini" && (lower.includes("2.5-pro") || lower.includes("1.5-pro") || lower.includes("gemini-1.0"))) {
-      return false;
-    }
-    
-    return true;
-  });
-}
+import {
+  fetchProviderModelsLive,
+  filterChatSupportedModels,
+  getProviderHttpErrorMessage,
+  getProviderNetworkErrorMessage,
+} from "@/lib/providers/providerAdapters";
 
 async function fetchProviderModels(
   req: NextRequest,
@@ -131,6 +86,62 @@ async function fetchProviderModels(
       },
       { status: 400 }
     );
+  }
+
+  if (providerId === "groq") {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    try {
+      const result = await fetchProviderModelsLive(providerId, effectiveKey, controller.signal);
+      if (!result.success) {
+        const status =
+          result.statusCode && result.statusCode >= 400
+            ? result.statusCode
+            : result.statusCode === 200
+            ? 404
+            : 502;
+        console.warn(`[Admin Models] Groq catalog request failed (HTTP ${status}).`);
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              status === 404
+                ? "لم يُرجع حساب Groq أي نماذج محادثة متاحة حالياً."
+                : getProviderHttpErrorMessage(status),
+            models: [],
+          },
+          { status }
+        );
+      }
+
+      const models = Array.from(new Set(filterChatSupportedModels(result.models, providerId)));
+      if (models.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "لم يُرجع حساب Groq أي نماذج محادثة متاحة.", models: [] },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        models,
+        source: "live_api",
+        count: models.length,
+      });
+    } catch (error) {
+      const timedOut =
+        controller.signal.aborted ||
+        (error instanceof Error && (error.name === "AbortError" || /timeout|timed out/i.test(error.message)));
+      console.warn(
+        `[Admin Models] Groq catalog request ${timedOut ? "timed out" : "failed due to a network error"}.`
+      );
+      return NextResponse.json(
+        { success: false, error: getProviderNetworkErrorMessage(timedOut), models: [] },
+        { status: timedOut ? 504 : 502 }
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   // 3. Special case: Perplexity AI official models catalog
@@ -546,28 +557,25 @@ async function fetchProviderModels(
         { status: 404 }
       );
     } else {
-      const errData = await res.json().catch(() => ({}));
-      const errMsg =
-        errData?.error?.message ||
-        errData?.message ||
-        `رمز الاستجابة ${res.status}`;
       return NextResponse.json(
         {
           success: false,
-          error: `فشل جلب النماذج الحية من (${providerId}): ${errMsg}`,
+        error: getProviderHttpErrorMessage(res.status),
           models: [],
         },
         { status: res.status }
       );
     }
   } catch (e: any) {
+    const timedOut =
+    e?.name === "AbortError" || /timeout|timed out/i.test(String(e?.message || ""));
     return NextResponse.json(
       {
         success: false,
-        error: `تعذر الاتصال بالمزود (${providerId}): ${e?.message || "خطأ في الشبكة أو انتهاء المهلة"}`,
+        error: getProviderNetworkErrorMessage(timedOut),
         models: [],
       },
-      { status: 504 }
+      { status: timedOut ? 504 : 502 }
     );
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runCodingAgent } from "@/lib/agent/coding/codingAgentEngine";
 import { ProjectWorkspace } from "@/lib/agent/coding/types";
 import { requireAuth } from "@/lib/auth/serverAuth";
+import { ProjectRepository } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,9 +33,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (workspace.id) {
+      const existingProject = await ProjectRepository.getProject(workspace.id);
+      if (existingProject && existingProject.userId !== authResult.user.id) {
+        return NextResponse.json(
+          { error: "غير مصرح لك بالوصول إلى مشروع مستخدم آخر", code: "PROJECT_FORBIDDEN" },
+          { status: 403 }
+        );
+      }
+    }
+
     const result = await runCodingAgent({
       userPrompt: prompt,
       workspace,
+      userId: authResult.user.id,
       modelId,
       isBuildUIMode,
     });

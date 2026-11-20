@@ -1,10 +1,13 @@
 /**
  * SoufTools Admin Analytics - Live Real-Time Pulse API Route
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { AnalyticsService } from "@/lib/analytics/analyticsService";
+import { requireAnalyticsAdmin } from "@/lib/analytics/analyticsAuth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const authorization = await requireAnalyticsAdmin(req);
+  if (authorization.response) return authorization.response;
   try {
     const pulse = AnalyticsService.getLivePulse();
     return NextResponse.json({ success: true, pulse });

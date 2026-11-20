@@ -57,6 +57,50 @@ export interface ModelCatalogFetchResult {
   statusCode?: number;
 }
 
+export function filterChatSupportedModels(models: string[], providerId: string): string[] {
+  return models.filter((id) => {
+    if (!id || typeof id !== "string") return false;
+    const lower = id.toLowerCase();
+
+    if (
+      lower.includes("whisper") ||
+      lower.includes("tts") ||
+      lower.includes("speech") ||
+      lower.includes("audio-transcription") ||
+      lower.includes("conformer") ||
+      lower.includes("embed") ||
+      lower.includes("bge-") ||
+      lower.includes("gte-") ||
+      lower.includes("voyage-") ||
+      lower.includes("guard") ||
+      lower.includes("moderation") ||
+      lower.includes("safety")
+    ) {
+      return false;
+    }
+
+    return !(
+      providerId === "gemini" &&
+      (lower.includes("2.5-pro") || lower.includes("1.5-pro") || lower.includes("gemini-1.0"))
+    );
+  });
+}
+
+export function getProviderHttpErrorMessage(status: number): string {
+  if (status === 401) return "مفتاح API غير صالح أو منتهي الصلاحية.";
+  if (status === 403) return "المفتاح لا يملك الصلاحيات المطلوبة لدى المزود.";
+  if (status === 404) return "النموذج أو المورد المطلوب غير موجود أو غير متاح لدى المزود.";
+  if (status === 429) return "تم تجاوز حدود الاستخدام لدى المزود. يرجى الانتظار ثم المحاولة مجدداً.";
+  if (status >= 500) return "يواجه المزود عطلاً مؤقتاً. يرجى المحاولة لاحقاً.";
+  return "رفض المزود الطلب. تحقق من النموذج وإعدادات الطلب.";
+}
+
+export function getProviderNetworkErrorMessage(timedOut: boolean): string {
+  return timedOut
+    ? "انتهت مهلة الاتصال بالمزود قبل اكتمال الطلب."
+    : "تعذر الاتصال بالمزود بسبب مشكلة في الشبكة.";
+}
+
 export const OPENAI_COMPATIBLE_BASE_URLS: Record<string, string> = {
   openai: "https://api.openai.com/v1",
   groq: "https://api.groq.com/openai/v1",
@@ -971,7 +1015,7 @@ export async function testProviderKeyLive(
       if (modelsRes.status === 404 || modelsRes.status === 405) {
         const pingModelMap: Record<string, string> = {
           openai: "gpt-4o-mini",
-          groq: "llama-3.1-8b-instant",
+          groq: "openai/gpt-oss-20b",
           deepseek: "deepseek-chat",
           openrouter: "auto",
           zhipu: "glm-4-flash",

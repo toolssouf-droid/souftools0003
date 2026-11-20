@@ -1193,7 +1193,7 @@ export const KeysManager: React.FC = () => {
               onChange={(e) => {
                 const nextProv = e.target.value;
                 let defaultSuggestedModel = "gemini-3.1-flash-lite";
-                if (nextProv === "groq") defaultSuggestedModel = "llama-3.1-8b-instant";
+                if (nextProv === "groq") defaultSuggestedModel = "openai/gpt-oss-20b";
                 if (nextProv === "anthropic") defaultSuggestedModel = "claude-3-5-haiku-latest";
                 if (nextProv === "openai") defaultSuggestedModel = "gpt-4o-mini";
                 if (nextProv === "deepseek") defaultSuggestedModel = "deepseek-chat";
@@ -1234,18 +1234,18 @@ export const KeysManager: React.FC = () => {
                   setClassifierConfig((prev) => ({ ...prev, model: e.target.value.trim() }));
                   setHasUnsavedChanges(true);
                 }}
-                placeholder="مثال: gemini-3.1-flash-lite أو llama-3.1-8b-instant"
+                placeholder="مثال: gemini-3.1-flash-lite أو openai/gpt-oss-20b"
                 className="w-full px-3 py-2 rounded-xl bg-[#0a0f0f] border border-[#1e2e2e] text-xs text-[#e8f5f5] font-mono focus:outline-none focus:border-[#00d4aa]"
               />
             </div>
             <div className="flex flex-wrap gap-1 mt-1.5">
-              {["gemini-3.1-flash-lite", "llama-3.1-8b-instant", "claude-3-5-haiku-latest", "gpt-4o-mini"].map((sugg) => (
+              {["gemini-3.1-flash-lite", "openai/gpt-oss-20b", "claude-3-5-haiku-latest", "gpt-4o-mini"].map((sugg) => (
                 <button
                   key={sugg}
                   type="button"
                   onClick={() => {
                     let p = "gemini";
-                    if (sugg.includes("llama")) p = "groq";
+                    if (sugg.includes("gpt-oss")) p = "groq";
                     if (sugg.includes("claude")) p = "anthropic";
                     if (sugg.includes("gpt")) p = "openai";
 

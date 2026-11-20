@@ -8,6 +8,7 @@
     "start": "next start -p 3000 -H 0.0.0.0",
     "lint": "next lint",
     "verify:nexus": "tsx scripts/verify-nexus-reliability.ts",
+    "verify:turso-errors": "tsx scripts/verify-turso-error-classification.ts",
     "verify:sync": "tsx scripts/verify-sync-reliability.ts",
     "verify:auth": "tsx scripts/verify-auth-session.ts"
   },

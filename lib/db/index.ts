@@ -20,6 +20,10 @@ import {
   validateTursoEnv,
   type TursoConnectionConfig,
 } from "./migrate";
+import {
+  isRetryableTursoError,
+  isTursoEndpointNotFound,
+} from "./tursoErrors";
 import { isUserAdmin } from "@/lib/auth/adminRoles";
 import { terminalLogger } from "@/lib/logger/terminalLogger";
 import { encryptKey, decryptKey } from "@/lib/encryption";
@@ -35,33 +39,6 @@ declare global {
   var _soufTursoConfigKey: string | undefined;
   var _soufMigrationPromise: Promise<void> | undefined;
   var _soufMigrationsComplete: boolean | undefined;
-}
-
-const RETRYABLE_ERROR_PATTERNS = [
-  "sqlite_busy",
-  "sqlite_locked",
-  "database is locked",
-  "database table is locked",
-  "cannot start a transaction",
-  "econnreset",
-  "etimedout",
-  "econnrefused",
-  "epipe",
-  "fetch failed",
-  "network",
-  "socket hang up",
-  "stream closed",
-  "hrana",
-  "502",
-  "503",
-  "504",
-  "timeout",
-];
-
-function isRetryableTursoError(err: unknown): boolean {
-  const msg = String((err as any)?.message || err || "").toLowerCase();
-  const code = String((err as any)?.code || "").toLowerCase();
-  return RETRYABLE_ERROR_PATTERNS.some((p) => msg.includes(p) || code.includes(p));
 }
 
 function isFatalClientError(err: unknown): boolean {
@@ -250,6 +227,12 @@ export async function executeWithRetry<T>(
       return await operation(database);
     } catch (err) {
       lastError = err;
+      if (isTursoEndpointNotFound(err)) {
+        throw new Error(
+          "[Turso] The remote endpoint returned HTTP 404. Verify that TURSO_DATABASE_URL points to an active database and TURSO_AUTH_TOKEN belongs to it.",
+          { cause: err }
+        );
+      }
       if (isFatalClientError(err)) {
         resetDbConnection();
       }
@@ -384,12 +367,16 @@ export const UserRepository = {
   }) {
     const cleanEmail = data.email.toLowerCase().trim();
     const isAdmin = isUserAdmin(cleanEmail);
-    const role = data.role || (isAdmin ? "super_admin" : "user");
+    const existing = await this.getById(data.id);
+    const role = isAdmin
+      ? "super_admin"
+      : existing?.role === "admin" || existing?.role === "super_admin"
+      ? existing.role
+      : "user";
     const database = await getReadyDb();
     const now = new Date();
 
     try {
-      const existing = await this.getById(data.id);
       if (existing) {
         const updated = await database
           .update(schema.users)

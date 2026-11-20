@@ -10,6 +10,8 @@ import { HeaderShuffler } from "./providers/headerShuffler";
 import {
   ALL_ROUTABLE_CHAT_PROVIDERS,
   executeRestChatRequest,
+  getProviderHttpErrorMessage,
+  getProviderNetworkErrorMessage,
   getChatEndpointForProvider,
 } from "./providers/providerAdapters";
 import { createLocaleContext, buildMultilingualSystemPrompt } from "./i18n";
@@ -68,7 +70,7 @@ function isNonChatModel(modelName: string): boolean {
   );
 }
 
-function resolveSafeChatModel(providerId: string, modelName: string): string {
+export function resolveSafeChatModel(providerId: string, modelName: string): string {
   if (!modelName) return "";
   const clean = modelName.trim();
 
@@ -82,14 +84,7 @@ function resolveSafeChatModel(providerId: string, modelName: string): string {
     }
   }
 
-  if (!isNonChatModel(clean)) {
-    // If it's a community preview model with strict 8k TPM limits on Groq, fallback to high-capacity production models
-    if (providerId === "groq" && (clean.includes("gpt-oss-120b") || clean.includes("gpt-oss-20b"))) {
-      return "llama-3.3-70b-versatile";
-    }
-    return clean;
-  }
-  if (providerId === "groq") return "llama-3.3-70b-versatile";
+  if (providerId === "groq" || !isNonChatModel(clean)) return clean;
   if (providerId === "openai") return "gpt-4o-mini";
   if (providerId === "anthropic") return "claude-3-5-sonnet-latest";
   if (providerId === "mistral") return "mistral-large-latest";
@@ -298,6 +293,12 @@ export async function executeRoutedPrompt(options: RouterExecuteOptions): Promis
 
   const logs: string[] = [];
   let attempts = 0;
+  let lastProviderFailure: { status?: number; timedOut?: boolean } = {};
+
+  const failureMessage = () =>
+    lastProviderFailure.status
+      ? getProviderHttpErrorMessage(lastProviderFailure.status)
+      : getProviderNetworkErrorMessage(lastProviderFailure.timedOut === true);
 
   // 0. Zero-Compute Intent Triage & Model Sizing Check (O(1) in-memory)
   const primaryModelName = providersToTry[0]?.model || modelDef.defaultProviders[0]?.model || "gemini-3-flash-preview";
@@ -701,6 +702,7 @@ export async function executeRoutedPrompt(options: RouterExecuteOptions): Promis
             } else {
               const errText = restRes.errorText || "";
               const safeFailure = safeProviderFailureLabel(restRes.status, errText);
+              lastProviderFailure = { status: restRes.status };
               logs.push(`[HTTP Error ${restRes.status}] ${prov.providerId}:${targetModel} -> ${safeFailure}`);
               
               serverErrorManager.recordError({
@@ -748,7 +750,10 @@ export async function executeRoutedPrompt(options: RouterExecuteOptions): Promis
                 continue;
               }
 
-              if (options.strictModelSelection && (restRes.status === 400 || restRes.status === 422)) {
+              if (
+                options.strictModelSelection &&
+                (restRes.status === 400 || restRes.status === 404 || restRes.status === 422)
+              ) {
                 logs.push(`[Strict Routing] Permanent request rejection from ${prov.providerId}: ${safeFailure}`);
                 break;
               }
@@ -763,6 +768,7 @@ export async function executeRoutedPrompt(options: RouterExecuteOptions): Promis
         } catch (err: any) {
           if (options.signal?.aborted) throw getAbortError(options.signal);
           const safeFailure = safeProviderFailureLabel(undefined, err);
+          lastProviderFailure = { timedOut: safeFailure === "timeout" };
           const errMsg = safeFailure;
           logs.push(`[Execution Error] ${prov.providerId}:${targetModel} -> ${safeFailure}`);
 
@@ -821,7 +827,9 @@ export async function executeRoutedPrompt(options: RouterExecuteOptions): Promis
       /no real valid api keys|no configured providers|no active provider/i.test(line)
     );
     return {
-      text: "تعذر تنفيذ الطلب عبر النموذج والمزود المحددين.",
+      text: hasConfigurationError
+        ? "لا توجد مفاتيح أو نماذج مفعّلة للمزود المحدد. تحقق من إعدادات لوحة الإدارة."
+        : failureMessage(),
       providerUsed: "none",
       modelUsed: providersToTry[0]?.model || modelId,
       keyUsedMasked: "none",
@@ -1069,10 +1077,15 @@ export async function executeRoutedPrompt(options: RouterExecuteOptions): Promis
                     errorLog: logs,
                   };
                 }
+              } else {
+                lastProviderFailure = { status: restRes.status };
               }
             }
           } catch (failErr: any) {
             if (options.signal?.aborted) throw getAbortError(options.signal);
+            lastProviderFailure = {
+              timedOut: safeProviderFailureLabel(undefined, failErr) === "timeout",
+            };
             logs.push(`[Dynamic Failover Error] ${candProv.providerId}:${targetModel} -> ${failErr?.message || String(failErr)}`);
           } finally {
             clearTimeout(fallbackTimeout);
@@ -1085,7 +1098,7 @@ export async function executeRoutedPrompt(options: RouterExecuteOptions): Promis
 
   // Never synthesize task-shaped output after every configured provider failed.
   return {
-    text: "تعذر الوصول إلى نموذج مهيأ لإكمال الطلب. لم تُنتج إجابة، يرجى المحاولة لاحقاً أو مراجعة إعدادات المزود.",
+    text: `${failureMessage()} لم تُنتج إجابة؛ يرجى المحاولة لاحقاً أو مراجعة إعدادات المزود.`,
     providerUsed: "none",
     modelUsed: modelId,
     keyUsedMasked: "none",

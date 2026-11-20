@@ -4,6 +4,7 @@
  */
 
 import { URL } from "url";
+import dns from "node:dns/promises";
 
 const FORBIDDEN_HOSTS = new Set([
   "localhost",
@@ -20,6 +21,98 @@ export function isSafePublicUrl(urlString: string): { safe: boolean; error?: str
 
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
       return { safe: false, error: "Only HTTP and HTTPS protocols are permitted" };
+    }
+
+    function isPrivateIpv4(hostname: string): boolean {
+      const match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+      if (!match) return false;
+      const octets = match.slice(1).map(Number);
+      if (octets.some((value) => value > 255)) return false;
+      const [a, b] = octets;
+      return (
+        a === 10 ||
+        a === 127 ||
+        a === 0 ||
+        (a === 100 && b >= 64 && b <= 127) ||
+        (a === 169 && b === 254) ||
+        (a === 172 && b >= 16 && b <= 31) ||
+        (a === 192 && b === 168) ||
+        (a === 198 && (b === 18 || b === 19)) ||
+        (a === 192 && b === 0)
+      );
+    }
+
+    function isPrivateIpv6(hostname: string): boolean {
+      const value = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+      if (!value.includes(":")) return false;
+      return (
+        value === "::" ||
+        value === "::1" ||
+        value.startsWith("fc") ||
+        value.startsWith("fd") ||
+        value.startsWith("fe8") ||
+        value.startsWith("fe9") ||
+        value.startsWith("fea") ||
+        value.startsWith("feb") ||
+        value.startsWith("::ffff:127.") ||
+        value.startsWith("::ffff:10.") ||
+        value.startsWith("::ffff:169.254.") ||
+        value.startsWith("::ffff:192.168.")
+      );
+    }
+
+    export async function resolveAndValidatePublicUrl(
+      urlString: string
+    ): Promise<{ safe: boolean; error?: string; url?: URL }> {
+      let parsed: URL;
+      try {
+        parsed = new URL(urlString);
+      } catch {
+        return { safe: false, error: "Invalid URL string" };
+      }
+
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return { safe: false, error: "Only HTTP and HTTPS protocols are permitted" };
+      }
+      if (parsed.username || parsed.password) {
+        return { safe: false, error: "Credentials in URLs are forbidden" };
+      }
+      if (parsed.port && !["80", "443", ""].includes(parsed.port)) {
+        return { safe: false, error: "Only ports 80 and 443 are permitted" };
+      }
+
+      const hostname = parsed.hostname.toLowerCase();
+      if (
+        hostname === "localhost" ||
+        hostname.endsWith(".localhost") ||
+        hostname.endsWith(".local") ||
+        hostname.endsWith(".internal") ||
+        isPrivateIpv4(hostname) ||
+        isPrivateIpv6(hostname)
+      ) {
+        return { safe: false, error: "Access to loopback/internal hosts is forbidden" };
+      }
+
+      if (/^[a-fA-F0-9:.]+:[a-fA-F0-9:.]*$/.test(hostname) || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)) {
+        if (isPrivateIpv4(hostname) || isPrivateIpv6(hostname)) {
+          return { safe: false, error: "Private IP addresses are forbidden" };
+        }
+      } else {
+        try {
+          const addresses = await dns.lookup(hostname, { verbatim: true, all: true });
+          if (!addresses.length) return { safe: false, error: "Hostname did not resolve" };
+          for (const address of addresses) {
+            const value = address.address;
+            if (isPrivateIpv4(value) || isPrivateIpv6(value)) {
+              return { safe: false, error: "Hostname resolves to a private address" };
+            }
+          }
+        } catch {
+          return { safe: false, error: "Hostname resolution failed" };
+        }
+      }
+
+      return { safe: true, url: parsed };
     }
 
     const hostname = parsed.hostname.toLowerCase();

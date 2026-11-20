@@ -46,6 +46,7 @@ npm install
 - **قاعدة البيانات (إلزامي)**:
   - `TURSO_DATABASE_URL`: رابط Turso Cloud (`libsql://...` أو `https://...`) أو مسار محلي مثل `file:./.turso_local/souftools.db`.
   - `TURSO_AUTH_TOKEN`: مطلوب عند استخدام رابط Turso Cloud بعيد.
+  - إذا ظهر HTTP 404 من Turso، تحقّق من أن الرابط يشير إلى قاعدة نشطة وأن الرمز صادر من قاعدة البيانات نفسها؛ لا يستخدم التطبيق قاعدة بديلة عند تعذر الاتصال.
 - **الذكاء الاصطناعي**: `GEMINI_API_KEY` (أو `GEMINI_API_KEYS` لتوزيع الحمولة).
 - **المصادقة والتشفير والأمان**: `BETTER_AUTH_SECRET`، ويفضّل ضبط `APP_URL` أو `BETTER_AUTH_URL` على نطاق الإنتاج؛ عند غيابهما يستخدم النظام `https://souftools0003.enzonic.dev` في روابط إعادة التعيين، `SESSION_SECRET`، `MASTER_ENCRYPTION_KEY` (أو `DATA_ENCRYPTION_KEY`)، `ENCRYPTION_SECRET`، `STORAGE_SIGNING_SECRET`، `ADMIN_EMAIL`، `ADMIN_MASTER_PASSWORD_HASH`، `CRON_SECRET`.
 - **البريد (إلزامي لإرسال رموز التحقق وروابط الاستعادة)**: إعداد SMTP (`SMTP_USER` و`SMTP_PASS` مع `SMTP_HOST`/`SMTP_PORT`) أو `RESEND_API_KEY`. **اختياري (القنوات وOAuth)**: `TELEGRAM_BOT_TOKEN`، `TELEGRAM_WEBHOOK_SECRET`، `GOOGLE_CLIENT_ID`/`SECRET`، `GITHUB_CLIENT_ID`/`SECRET`.

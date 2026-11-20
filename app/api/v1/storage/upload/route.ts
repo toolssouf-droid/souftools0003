@@ -65,8 +65,9 @@ export async function POST(req: NextRequest) {
       file: uploadResult.file,
     });
   } catch (err: any) {
+    console.error("[Storage upload] unexpected error", err);
     return NextResponse.json(
-      { code: "INTERNAL_ERROR", message: "خطأ أثناء معالجة رفع الملف", error: err.message },
+      { code: "INTERNAL_ERROR", message: "خطأ أثناء معالجة رفع الملف" },
       { status: 500 }
     );
   }

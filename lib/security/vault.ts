@@ -13,18 +13,43 @@ import { getReadyDb } from "@/lib/db";
 import { encryptedVaultKeys, adminLogs } from "@/lib/db/schema";
 import { eq, and, desc, isNull } from "drizzle-orm";
 
-const MEK_RAW =
-  process.env.DATA_ENCRYPTION_KEY ||
-  process.env.MASTER_ENCRYPTION_KEY ||
-  process.env.ENCRYPTION_SECRET ||
-  "souftools_master_envelope_encryption_key_2026_fallback";
+function getConfiguredMasterKey(): Buffer {
+  const raw =
+    process.env.DATA_ENCRYPTION_KEY ||
+    process.env.MASTER_ENCRYPTION_KEY ||
+    process.env.ENCRYPTION_SECRET;
 
-const MASTER_KEY = crypto.createHash("sha256").update(MEK_RAW).digest();
+  if (!raw) {
+    throw new Error("Encryption key configuration is missing");
+  }
 
-function deriveKEK(version: number): Buffer {
+  const clean = raw.trim();
+  let key: Buffer;
+  if (/^[a-fA-F0-9]{64}$/.test(clean)) {
+    key = Buffer.from(clean, "hex");
+  } else {
+    try {
+      const base64 = Buffer.from(clean, "base64");
+      key = base64.length === 32 && base64.toString("base64").replace(/=+$/, "") === clean.replace(/=+$/, "")
+        ? base64
+        : Buffer.alloc(0);
+    } catch {
+      key = Buffer.alloc(0);
+    }
+  }
+  if (key.length === 0) {
+    key = Buffer.from(clean, "utf8");
+  }
+  if (key.length < 32) {
+    throw new Error("Encryption key must be at least 32 bytes");
+  }
+  return crypto.createHash("sha256").update(key).digest();
+}
+
+function deriveKEK(version: number, masterKey = getConfiguredMasterKey()): Buffer {
   const salt = Buffer.from("souftools_vault_salt_v1", "utf8");
   const info = Buffer.from(`kek-version-${version}`, "utf8");
-  return Buffer.from(crypto.hkdfSync("sha256", MASTER_KEY, salt, info, 32));
+  return Buffer.from(crypto.hkdfSync("sha256", masterKey, salt, info, 32));
 }
 
 export interface EncryptedKeyPayload {

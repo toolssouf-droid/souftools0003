@@ -301,6 +301,11 @@ export const AddProviderModal: React.FC<AddProviderModalProps> = ({
                 placeholder="اضغط على جلب أحدث نماذج الذكاء الاصطناعي..."
                 className="w-full bg-[#111a1a] text-xs text-[#e8f5f5] placeholder-[#4a7070] p-2.5 rounded-xl border border-[#1e2e2e] focus:border-[#00d4aa] outline-none"
               />
+              {selectedProviderId === "groq" && (
+                <p className="mt-1.5 text-[10px] leading-relaxed text-[#6a8585]">
+                  النماذج الافتراضية مقترحات احتياطية فقط؛ قد يختلف توفرها حسب حساب Groq. استخدم الجلب الحي للتأكد.
+                </p>
+              )}
             </div>
 
             <div>

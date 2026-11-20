@@ -38,6 +38,14 @@ export class CodingAgentToolManager {
     args: Record<string, any>
   ): Promise<ToolCallResult> {
     const timestamp = Date.now();
+    const authenticatedUserId =
+      typeof args.userId === "string" && args.userId.trim() ? args.userId.trim() : null;
+    if (!authenticatedUserId) {
+      return {
+        success: false,
+        message: "تعذر تحديد هوية المستخدم الموثقة",
+      };
+    }
 
     switch (toolName) {
       // 1. READ FILE
@@ -310,7 +318,7 @@ export class CodingAgentToolManager {
           // In-process server execution: direct SandboxManager call (zero network hop, zero URL parsing error)
           const sbx = await SandboxManager.getOrCreateForProject({
             projectId: workspace.id,
-            userId: args.userId || "user_active",
+            userId: authenticatedUserId,
             projectName: workspace.title || "SoufAI Project",
             framework: workspace.framework,
             files: rawFiles,
@@ -548,7 +556,7 @@ export class CodingAgentToolManager {
           // Direct in-process Sandbox initialization and synchronization
           const sbx = await SandboxManager.getOrCreateForProject({
             projectId: workspace.id,
-            userId: args.userId || "user_active",
+            userId: authenticatedUserId,
             projectName: workspace.title || "SoufAI Project",
             framework: workspace.framework,
             files: rawFiles,
@@ -644,7 +652,7 @@ export class CodingAgentToolManager {
         try {
           if (subAction === "stop_sandbox") {
             const sessId = args.sessionId || workspace.id;
-            const stopped = SandboxManager.stopSandbox(sessId);
+            const stopped = SandboxManager.stopSandbox(sessId, authenticatedUserId);
             return {
               success: stopped,
               message: stopped ? "تم إيقاف وحفظ Sandbox" : "لم يتم العثور على ساندبوكس نشط",
@@ -684,7 +692,7 @@ export class CodingAgentToolManager {
 
           if (subAction === "check_status") {
             const sessId = args.sessionId || workspace.id;
-            const sbx = SandboxManager.getSandbox(sessId);
+            const sbx = SandboxManager.getSandbox(sessId, authenticatedUserId);
             const isActive = sbx ? sbx.status === "running" || sbx.status === "active" : false;
             return {
               success: true,
@@ -702,7 +710,7 @@ export class CodingAgentToolManager {
 
           // Default: Create or ensure active sandbox session directly in-process
           const sbx = await SandboxManager.getOrCreateForProject({
-            userId: args.userId || "user_active",
+            userId: authenticatedUserId,
             projectId: workspace.id,
             projectName: workspace.title || "SoufAI Project",
             framework: workspace.framework,
