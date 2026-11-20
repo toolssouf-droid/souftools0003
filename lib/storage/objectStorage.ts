@@ -14,12 +14,16 @@ const STORAGE_ROOT =
   path.join(process.cwd(), ".souftools_storage");
 const STORAGE_PATH_REQUIRED = process.env.VERCEL === "1" && !process.env.STORAGE_LOCAL_DIR?.trim();
 
-const SIGNING_SECRET =
-  process.env.STORAGE_SIGNING_SECRET ||
-  process.env.ENCRYPTION_SECRET;
+function getSigningSecret(): string {
+  const secret =
+    process.env.STORAGE_SIGNING_SECRET ||
+    process.env.ENCRYPTION_SECRET;
 
-if (!SIGNING_SECRET || SIGNING_SECRET.trim().length < 32) {
-  throw new Error("STORAGE_SIGNING_SECRET or ENCRYPTION_SECRET must contain at least 32 characters");
+  if (!secret || secret.trim().length < 32) {
+    throw new Error("STORAGE_SIGNING_SECRET or ENCRYPTION_SECRET must contain at least 32 characters");
+  }
+
+  return secret;
 }
 
 export interface StoredFileResult {
@@ -38,10 +42,11 @@ export const ObjectStorage = {
    * Generates an HMAC-signed token for time-limited, private file downloads
    */
   generateSignedToken(fileId: string, userId: string, expiresInSeconds = 900): string {
+    const signingSecret = getSigningSecret();
     const expiresAt = Math.floor(Date.now() / 1000) + expiresInSeconds;
     const payload = `${fileId}:${userId}:${expiresAt}`;
     const hmac = crypto
-      .createHmac("sha256", SIGNING_SECRET)
+      .createHmac("sha256", signingSecret)
       .update(payload)
       .digest("hex");
     return `${Buffer.from(payload).toString("base64url")}.${hmac}`;
@@ -51,6 +56,7 @@ export const ObjectStorage = {
    * Verifies an HMAC-signed token
    */
   verifySignedToken(token: string): { valid: boolean; fileId?: string; userId?: string; error?: string } {
+    const signingSecret = getSigningSecret();
     try {
       const [payloadB64, hmac] = token.split(".");
       if (!payloadB64 || !hmac) {
@@ -65,7 +71,7 @@ export const ObjectStorage = {
       }
 
       const expectedHmac = crypto
-        .createHmac("sha256", SIGNING_SECRET)
+        .createHmac("sha256", signingSecret)
         .update(payload)
         .digest("hex");
 
